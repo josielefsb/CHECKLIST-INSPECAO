@@ -124,10 +124,25 @@
       ]
     };
 
+    const ESSENTIAL_ITEM_IDS = new Set([
+      "operator-authorization", "structure", "glass-mirrors", "tires", "wheels",
+      "leaks-underbody", "engine-oil", "coolant", "brake-fluid", "fuel", "belts-hoses",
+      "service-brake", "parking-brake", "steering", "pedals-controls", "headlights",
+      "lights", "dashboard", "seat-belt", "safety-guards", "starting", "idle-exhaust",
+      "operational-test", "car-seatbelts", "car-airbags", "car-exhaust",
+      "truck-air-brake", "truck-air-warning", "truck-fifth-wheel", "truck-connections",
+      "truck-load", "truck-tires", "truck-exit", "truck-coupling-test",
+      "machine-hydraulics", "machine-hoses", "machine-attachment", "machine-undercarriage",
+      "machine-outriggers", "machine-rops", "machine-emergency-stop", "machine-controls",
+      "machine-warning", "machine-steps", "machine-work-area"
+    ]);
+
     const DRAFT_KEY = "frota-checklist-draft-v1";
     const HISTORY_KEY = "frota-checklist-history-v1";
     const VEHICLES_KEY = "frota-checklist-vehicles-v1";
     const OPERATORS_KEY = "frota-checklist-operators-v1";
+    const AUTH_KEY = "frota-checklist-password-sha256-v1";
+    const INITIAL_PASSWORD = "123456";
     const statusNames = { ok: "Conforme", fail: "Não conforme", na: "N/A" };
     const notice = document.getElementById("notice");
     let draft = readDraft();
@@ -313,13 +328,72 @@
       return save(DRAFT_KEY, draft);
     }
 
+    async function compressPhoto(file) {
+      if (!file.type.startsWith("image/")) {
+        throw new Error("Escolha um arquivo de imagem.");
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        throw new Error("A foto deve ter no máximo 8 MB antes da compactação.");
+      }
+      if (typeof createImageBitmap !== "function") {
+        throw new Error("Este navegador não oferece suporte ao processamento de fotos.");
+      }
+
+      const image = await createImageBitmap(file);
+      const scale = Math.min(1, 1000 / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+      image.close();
+
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.68));
+      if (!blob) throw new Error("Não foi possível compactar a foto.");
+      if (blob.size > 300 * 1024) {
+        throw new Error("A foto compactada ainda é grande demais. Escolha uma imagem menor.");
+      }
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener("load", () => resolve(reader.result));
+        reader.addEventListener("error", () => reject(new Error("Não foi possível ler a foto selecionada.")));
+        reader.readAsDataURL(blob);
+      });
+    }
+
     function allSections() {
       if (!draft.vehicle.type) return [];
       return [...commonSections, ...typeSections[draft.vehicle.type]];
     }
 
     function allItems() {
-      return allSections().flatMap((section) => section.items.map(([id, label]) => ({ id, label, section: section.title })));
+      return allSections().flatMap((section) => section.items.map(([id, label]) => ({
+        id,
+        label,
+        section: section.title,
+        essential: ESSENTIAL_ITEM_IDS.has(id)
+      })));
+    }
+
+    function calculateAptitude() {
+      const items = allItems();
+      const essentialItems = items.filter(({ essential }) => essential);
+      const unconfirmedEssential = essentialItems.filter(({ id }) => draft.answers[id]?.status !== "ok").length;
+      const criticalFailures = essentialItems.filter(({ id }) => draft.answers[id]?.status === "fail");
+      if (!essentialItems.length) {
+        return { status: "pending", missingCount: 0, criticalFailures, remainingCount: 0 };
+      }
+      if (criticalFailures.length) {
+        return { status: "unfit", missingCount: unconfirmedEssential, criticalFailures, remainingCount: items.filter(({ id }) => !draft.answers[id]?.status).length };
+      }
+      if (unconfirmedEssential) {
+        return { status: "pending", missingCount: unconfirmedEssential, criticalFailures, remainingCount: items.filter(({ id }) => !draft.answers[id]?.status).length };
+      }
+      return {
+        status: "fit",
+        missingCount: 0,
+        criticalFailures,
+        remainingCount: items.filter(({ id }) => !draft.answers[id]?.status).length
+      };
     }
 
     function formatDate(value) {
@@ -383,8 +457,9 @@
 
         section.items.forEach(([id, label]) => {
           const answer = draft.answers[id] || {};
+          const essential = ESSENTIAL_ITEM_IDS.has(id);
           const row = document.createElement("div");
-          row.className = `inspection-item${answer.status === "fail" ? " has-failure" : ""}`;
+          row.className = `inspection-item${answer.status === "fail" ? " has-failure" : ""}${answer.status === "fail" && essential ? " has-critical-failure" : ""}`;
           row.dataset.itemId = id;
           const copy = document.createElement("div");
           copy.className = "item-copy";
@@ -392,6 +467,12 @@
           name.className = "item-name";
           name.textContent = label;
           copy.append(name);
+          if (essential) {
+            const criticalLabel = document.createElement("span");
+            criticalLabel.className = "critical-label";
+            criticalLabel.textContent = "Requisito essencial para operação";
+            copy.append(criticalLabel);
+          }
           if (answer.status === "fail" && !answer.note?.trim()) {
             const hint = document.createElement("span");
             hint.className = "item-note-hint";
@@ -413,7 +494,12 @@
             button.setAttribute("aria-pressed", String(answer.status === value));
             button.disabled = locked;
             button.addEventListener("click", () => {
-              draft.answers[id] = { ...draft.answers[id], status: value, note: value === "fail" ? (draft.answers[id]?.note || "") : "" };
+              draft.answers[id] = {
+                ...draft.answers[id],
+                status: value,
+                note: value === "fail" ? (draft.answers[id]?.note || "") : "",
+                photo: value === "fail" ? (draft.answers[id]?.photo || "") : ""
+              };
               saveDraft();
               renderChecklist();
               document.querySelector(`.status-button[data-item-id="${id}"][data-status="${value}"]`)?.focus();
@@ -441,6 +527,56 @@
               updateSummary();
             });
             noteField.append(noteLabel, note);
+
+            const photoLabel = document.createElement("label");
+            photoLabel.className = "photo-field";
+            const photoLabelText = document.createElement("span");
+            photoLabelText.textContent = "Foto da não conformidade (opcional)";
+            const photoInput = document.createElement("input");
+            photoInput.type = "file";
+            photoInput.accept = "image/*";
+            photoInput.setAttribute("capture", "environment");
+            photoInput.disabled = locked;
+            const photoHint = document.createElement("span");
+            photoHint.className = "photo-hint";
+            photoHint.textContent = "A foto será compactada e anexada a este item.";
+            photoInput.addEventListener("change", async () => {
+              const file = photoInput.files?.[0];
+              if (!file) return;
+              photoInput.disabled = true;
+              try {
+                draft.answers[id].photo = await compressPhoto(file);
+                if (!saveDraft()) return;
+                renderChecklist();
+                document.querySelector(`.inspection-item[data-item-id="${id}"] .photo-field input`)?.focus();
+              } catch (error) {
+                showNotice(`Não foi possível anexar a foto: ${error.message}`);
+                photoInput.disabled = locked;
+                photoInput.value = "";
+              }
+            });
+            photoLabel.append(photoLabelText, photoInput, photoHint);
+            noteField.append(photoLabel);
+
+            if (answer.photo) {
+              const preview = document.createElement("div");
+              preview.className = "photo-preview";
+              const image = document.createElement("img");
+              image.src = answer.photo;
+              image.alt = `Foto da não conformidade: ${label}`;
+              const removePhoto = document.createElement("button");
+              removePhoto.type = "button";
+              removePhoto.className = "remove-photo";
+              removePhoto.textContent = "Remover foto";
+              removePhoto.disabled = locked;
+              removePhoto.addEventListener("click", () => {
+                delete draft.answers[id].photo;
+                saveDraft();
+                renderChecklist();
+              });
+              preview.append(image, removePhoto);
+              noteField.append(preview);
+            }
             row.append(noteField);
           }
           group.append(row);
@@ -458,6 +594,7 @@
       const failures = answers.filter((answer) => answer.status === "fail").length;
       const conforms = answers.filter((answer) => answer.status === "ok").length;
       const notApplicable = answers.filter((answer) => answer.status === "na").length;
+      const aptitude = calculateAptitude();
       const percentage = total ? Math.round((responded / total) * 100) : 0;
       document.getElementById("progress-text").textContent = `${responded} de ${total}`;
       document.getElementById("progress-fill").style.width = `${percentage}%`;
@@ -478,15 +615,43 @@
         summary.append(pill);
       });
 
+      const aptitudeCard = document.getElementById("aptitude-card");
+      const aptitudeStatus = document.getElementById("aptitude-status");
+      const aptitudeDetail = document.getElementById("aptitude-detail");
+      aptitudeCard.className = `aptitude-card ${aptitude.status}`;
+      if (aptitude.status === "pending") {
+        aptitudeStatus.textContent = "Pendente";
+        aptitudeDetail.textContent = total
+          ? `Confirme como “Conforme” todos os requisitos essenciais (${aptitude.missingCount} aguardando confirmação).`
+          : "Selecione o tipo de veículo e conclua a inspeção para avaliar os requisitos essenciais.";
+      } else if (aptitude.status === "unfit") {
+        aptitudeStatus.textContent = "Não apto";
+        aptitudeDetail.textContent = `Falha em ${aptitude.criticalFailures.length} requisito(s) essencial(is). Não opere e comunique o responsável.`;
+      } else {
+        aptitudeStatus.textContent = "Apto";
+        if (aptitude.remainingCount) {
+          aptitudeDetail.textContent = `Requisitos essenciais atendidos. Complete os ${aptitude.remainingCount} itens restantes antes de finalizar.`;
+        } else if (failures) {
+          aptitudeDetail.textContent = "Requisitos essenciais atendidos; há outras não conformidades registradas. Avalie-as antes da liberação.";
+        } else {
+          aptitudeDetail.textContent = "Todos os itens foram verificados e os requisitos essenciais para operação foram atendidos.";
+        }
+      }
+
       const result = document.getElementById("result-banner");
-      if (draft.finalizedAt) {
+      if (aptitude.status === "unfit") {
+        result.textContent = `${draft.finalizedAt ? "Inspeção finalizada" : "Inspeção em andamento"}: falha em requisito essencial. Veículo não apto para operação.`;
+        result.className = "result-banner bad";
+      } else if (draft.finalizedAt) {
         result.textContent = failures ? `Inspeção finalizada com ${failures} não conformidade(s). Avalie os riscos antes de liberar o equipamento.` : "Inspeção finalizada. Confirme as condições de uso antes de iniciar a operação.";
         result.className = `result-banner ${failures ? "bad" : "good"}`;
       } else if (failures) {
-        result.textContent = `${failures} não conformidade(s) identificada(s). Não opere em caso de falha crítica; comunique o responsável.`;
+        result.textContent = `${failures} não conformidade(s) identificada(s). O status de aptidão só será calculado após responder todos os itens.`;
         result.className = "result-banner bad";
       } else {
-        result.textContent = "A inspeção não substitui os procedimentos de segurança da sua operação.";
+        result.textContent = total && responded === total
+          ? "Todos os requisitos essenciais foram atendidos. Siga os procedimentos de segurança da operação."
+          : "O status de aptidão será calculado após todos os itens serem verificados.";
         result.className = "result-banner";
       }
       document.getElementById("finish-checklist").disabled = !total || Boolean(draft.finalizedAt);
@@ -514,7 +679,8 @@
         title.textContent = vehicleName(record.vehicle);
         const detail = document.createElement("span");
         const issues = Object.values(record.answers || {}).filter((answer) => answer.status === "fail").length;
-        detail.textContent = `${record.operator || "Operador não informado"} · ${formatDate(record.openedAt)} · ${issues} não conformidade(s)`;
+        const aptitudeLabel = record.aptitude === "fit" ? "Apto" : record.aptitude === "unfit" ? "Não apto" : "Pendente";
+        detail.textContent = `${record.operator || "Operador não informado"} · ${formatDate(record.openedAt)} · ${aptitudeLabel} · ${issues} não conformidade(s)`;
         entry.append(title, detail);
         container.append(entry);
       });
@@ -708,6 +874,7 @@
         return;
       }
 
+      draft.aptitude = calculateAptitude().status;
       draft.finalizedAt = new Date().toISOString();
       const record = JSON.parse(JSON.stringify(draft));
       history.unshift(record);
@@ -735,6 +902,111 @@
     });
 
     document.getElementById("print-report").addEventListener("click", () => window.print());
+
+    async function passwordHash(password) {
+      if (!crypto.subtle) {
+        throw new Error("A autenticação exige um navegador seguro. Abra a aplicação por localhost ou HTTPS.");
+      }
+      const bytes = new TextEncoder().encode(password);
+      const digest = await crypto.subtle.digest("SHA-256", bytes);
+      return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function isValidPassword(password) {
+      let savedHash;
+      try {
+        savedHash = localStorage.getItem(AUTH_KEY);
+      } catch (error) {
+        throw new Error(`Não foi possível verificar a senha salva: ${error.message}`);
+      }
+      if (!savedHash) return password === INITIAL_PASSWORD;
+      return (await passwordHash(password)) === savedHash;
+    }
+
+    document.getElementById("login-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const username = document.getElementById("login-user").value.trim();
+      const password = document.getElementById("login-password").value;
+      const errorElement = document.getElementById("login-error");
+      errorElement.hidden = true;
+      if (!username) {
+        errorElement.textContent = "Informe seu nome de usuário.";
+        errorElement.hidden = false;
+        return;
+      }
+      try {
+        if (!(await isValidPassword(password))) {
+          errorElement.textContent = "Senha incorreta. Confira a senha e tente novamente.";
+          errorElement.hidden = false;
+          document.getElementById("login-password").focus();
+          return;
+        }
+      } catch (error) {
+        errorElement.textContent = error.message;
+        errorElement.hidden = false;
+        return;
+      }
+
+      document.getElementById("logged-user").textContent = username;
+      document.getElementById("login-screen").hidden = true;
+      document.getElementById("app-shell").hidden = false;
+      document.getElementById("login-password").value = "";
+      if (!draft.finalizedAt && !draft.operator.trim()) {
+        draft.operator = username;
+        setInputValues();
+        saveDraft();
+        renderRegistries();
+      }
+    });
+
+    document.getElementById("logout-button").addEventListener("click", () => {
+      document.getElementById("app-shell").hidden = true;
+      document.getElementById("login-screen").hidden = false;
+      document.getElementById("login-password").value = "";
+      document.getElementById("login-error").hidden = true;
+      document.getElementById("login-user").focus();
+    });
+
+    const passwordDialog = document.getElementById("password-dialog");
+    document.getElementById("change-password-button").addEventListener("click", () => {
+      document.getElementById("password-error").hidden = true;
+      passwordDialog.showModal();
+      document.getElementById("current-password").focus();
+    });
+    document.getElementById("cancel-password").addEventListener("click", () => passwordDialog.close());
+    document.getElementById("change-password-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const current = document.getElementById("current-password").value;
+      const next = document.getElementById("new-password").value;
+      const confirmation = document.getElementById("confirm-password").value;
+      const errorElement = document.getElementById("password-error");
+      errorElement.hidden = true;
+      if (next.length < 6) {
+        errorElement.textContent = "A nova senha precisa ter pelo menos 6 caracteres.";
+        errorElement.hidden = false;
+        return;
+      }
+      if (next !== confirmation) {
+        errorElement.textContent = "A confirmação não corresponde à nova senha.";
+        errorElement.hidden = false;
+        return;
+      }
+      try {
+        if (!(await isValidPassword(current))) {
+          errorElement.textContent = "A senha atual está incorreta.";
+          errorElement.hidden = false;
+          return;
+        }
+        localStorage.setItem(AUTH_KEY, await passwordHash(next));
+        document.getElementById("change-password-form").reset();
+        passwordDialog.close();
+        document.querySelector(".login-hint").textContent = "A senha inicial foi alterada neste navegador.";
+        showNotice("Senha alterada. Use a nova senha no próximo acesso.");
+      } catch (error) {
+        errorElement.textContent = `Não foi possível alterar a senha: ${error.message}`;
+        errorElement.hidden = false;
+      }
+    });
 
     setInputValues();
     renderChecklist();

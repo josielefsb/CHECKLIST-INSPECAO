@@ -9,10 +9,35 @@
   <script src="script.js" defer></script>
 </head>
 <body>
+  <section class="login-screen" id="login-screen" aria-labelledby="login-heading">
+    <form class="login-card" id="login-form">
+      <div class="brand login-brand"><span class="brand-mark" aria-hidden="true">✓</span><span>INSPEÇÃO DE FROTA</span></div>
+      <p class="eyebrow">Acesso ao sistema</p>
+      <h1 id="login-heading">Entre para continuar</h1>
+      <p class="login-description">Identifique-se para acessar os dados e iniciar a inspeção.</p>
+      <div class="field">
+        <label for="login-user">Usuário</label>
+        <input id="login-user" name="username" autocomplete="username" maxlength="100" placeholder="Digite seu nome" required>
+      </div>
+      <div class="field">
+        <label for="login-password">Senha</label>
+        <input id="login-password" name="password" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Digite a senha" required>
+      </div>
+      <button class="button button-primary login-submit" type="submit">Entrar</button>
+      <p class="login-hint">Senha inicial: <strong>123456</strong>. Se já foi alterada neste navegador, use a nova senha.</p>
+      <p class="login-error" id="login-error" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <div class="app-shell" id="app-shell" hidden>
   <div class="topbar">
     <div class="topbar-inner">
       <div class="brand"><span class="brand-mark" aria-hidden="true">✓</span><span>INSPEÇÃO DE FROTA</span></div>
-      <span class="topbar-note">Registro de segurança e condição operacional</span>
+      <div class="user-actions">
+        <span class="topbar-note">Acesso: <strong id="logged-user"></strong></span>
+        <button class="topbar-action" id="change-password-button" type="button">Alterar senha</button>
+        <button class="topbar-action" id="logout-button" type="button">Sair</button>
+      </div>
     </div>
   </div>
 
@@ -24,7 +49,7 @@
         <p class="subtitle">Identifique o equipamento, registre as condições de cada item e documente qualquer não conformidade antes de iniciar a operação.</p>
       </div>
       <div class="header-actions">
-        <button class="button" id="print-report" type="button">Imprimir relatório</button>
+        <button class="button button-print" id="print-report" type="button">Imprimir relatório</button>
         <button class="button button-primary" id="new-checklist" type="button">+ Novo checklist</button>
       </div>
     </header>
@@ -166,6 +191,11 @@
           <p id="summary-description">Selecione um tipo para iniciar o checklist.</p>
           <div class="summary-big"><strong id="summary-percent">0%</strong><span>respondidos</span></div>
           <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="summary-fill"></div></div>
+          <div class="aptitude-card pending" id="aptitude-card" aria-live="polite">
+            <span>Condição para operação</span>
+            <strong id="aptitude-status">Pendente</strong>
+            <small id="aptitude-detail">Conclua a inspeção para avaliar os requisitos essenciais.</small>
+          </div>
           <div class="result-banner" id="result-banner">Aguardando identificação do veículo.</div>
         </section>
         <section class="panel side-panel history">
@@ -178,7 +208,31 @@
     </div>
   </main>
   <footer>Inspecione o equipamento em local seguro. Em caso de falha crítica, não opere e comunique o responsável.</footer>
+  </div>
 
-
+  <dialog class="password-dialog" id="password-dialog" aria-labelledby="password-heading">
+    <form id="change-password-form">
+      <h2 id="password-heading">Alterar senha de acesso</h2>
+      <p>A senha atual é necessária para confirmar a alteração.</p>
+      <div class="field">
+        <label for="current-password">Senha atual</label>
+        <input id="current-password" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label for="new-password">Nova senha</label>
+        <input id="new-password" type="password" autocomplete="new-password" minlength="6" required>
+        <span class="field-hint">Use pelo menos 6 caracteres.</span>
+      </div>
+      <div class="field">
+        <label for="confirm-password">Confirme a nova senha</label>
+        <input id="confirm-password" type="password" autocomplete="new-password" minlength="6" required>
+      </div>
+      <p class="login-error" id="password-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button class="button" id="cancel-password" type="button">Cancelar</button>
+        <button class="button button-primary" type="submit">Salvar nova senha</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>

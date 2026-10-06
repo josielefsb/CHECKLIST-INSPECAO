@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101c2d">
+  <title>Inspeção de frota</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172536;
+      --muted: #657487;
+      --line: #e1e7ed;
+      --paper: #fff;
+      --canvas: #f2f5f7;
+      --navy: #101c2d;
+      --blue: #2364d2;
+      --blue-soft: #edf4ff;
+      --green: #16805a;
+      --green-soft: #eaf7f1;
+      --red: #c63c45;
+      --red-soft: #fff0f0;
+      --amber: #996714;
+      --amber-soft: #fff6e4;
+      --radius: 16px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .topbar { background: var(--navy); color: white; }
+    .topbar-inner, main { width: min(1160px, calc(100% - 40px)); margin: 0 auto; }
+    .topbar-inner { min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: -.02em; }
+    .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px; background: #243c59; color: #b9d4ff; font-size: 19px; }
+    .topbar-note { color: #b7c4d4; font-size: .83rem; }
+    main { padding: 38px 0 56px; }
+    .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 25px; }
+    .eyebrow { margin: 0 0 8px; color: var(--blue); font-size: .74rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 0; color: var(--navy); font-size: clamp(2rem, 4vw, 2.75rem); letter-spacing: -.055em; line-height: 1.08; }
+    .subtitle { max-width: 680px; margin: 10px 0 0; color: var(--muted); line-height: 1.55; }
+    .header-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+    .button { min-height: 42px; padding: 10px 15px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: white; font-weight: 750; }
+    .button:hover { background: #f8fafc; }
+    .button-primary { border-color: var(--blue); color: white; background: var(--blue); }
+    .button-primary:hover { background: #1d55b5; }
+    .button:disabled { cursor: not-allowed; opacity: .55; }
+    .notice { margin: 0 0 18px; padding: 12px 15px; border: 1px solid #e9c777; border-radius: 11px; color: #684909; background: var(--amber-soft); line-height: 1.45; }
+    .notice[hidden] { display: none; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; gap: 20px; }
+    .main-column, .side-column { display: grid; gap: 18px; min-width: 0; }
+    .panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); box-shadow: 0 5px 20px rgba(20, 39, 61, .035); }
+    .panel-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 20px 22px 15px; }
+    .panel-heading h2 { margin: 0; color: var(--navy); font-size: 1.04rem; letter-spacing: -.02em; }
+    .panel-heading p { margin: 5px 0 0; color: var(--muted); font-size: .85rem; line-height: 1.45; }
+    .section-number { flex: 0 0 30px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; color: var(--blue); background: var(--blue-soft); font-size: .82rem; font-weight: 850; }
+    .identity-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; padding: 4px 22px 22px; }
+    .field { display: grid; align-content: start; gap: 7px; min-width: 0; }
+    .field label { color: #344459; font-size: .79rem; font-weight: 750; }
+    .field input, .field select, .field textarea {
+      width: 100%; min-width: 0; min-height: 43px; padding: 10px 11px; border: 1px solid #d7dfe7;
+      border-radius: 9px; outline: none; color: var(--ink); background: white;
+    }
+    .field textarea { min-height: 70px; resize: vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #75a2eb; box-shadow: 0 0 0 3px rgba(35, 100, 210, .12); }
+    .field input[readonly] { color: #556579; background: #f5f7f9; }
+    .field-hint { color: var(--muted); font-size: .72rem; }
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+    .checklist-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 17px 22px; border-bottom: 1px solid var(--line); }
+    .progress-area { flex: 1; min-width: 0; }
+    .progress-meta { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 9px; color: #43536a; font-size: .8rem; font-weight: 750; }
+    .progress-track { height: 8px; overflow: hidden; border-radius: 99px; background: #e9edf2; }
+    .progress-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2770e2, #41a9db); transition: width .2s ease; }
+    .summary-pills { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 22px 16px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 99px; color: #4e5d70; background: #f0f3f6; font-size: .72rem; font-weight: 800; }
+    .pill-good { color: var(--green); background: var(--green-soft); }
+    .pill-bad { color: var(--red); background: var(--red-soft); }
+    .pill-warn { color: var(--amber); background: var(--amber-soft); }
+    .groups { display: grid; gap: 12px; padding: 0 14px 14px; }
+    .group { overflow: hidden; border: 1px solid #e7ebf0; border-radius: 12px; }
+    .group-title { display: flex; justify-content: space-between; gap: 12px; padding: 13px 15px; color: #25374c; background: #f8fafb; font-size: .88rem; font-weight: 850; }
+    .group-count { color: var(--muted); font-size: .74rem; font-weight: 700; }
+    .inspection-item { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: start; gap: 12px 18px; padding: 14px 15px; border-top: 1px solid #edf0f3; }
+    .inspection-item:first-of-type { border-top: 0; }
+    .inspection-item.has-failure { background: #fffafa; }
+    .item-copy { display: grid; gap: 4px; padding-top: 4px; }
+    .item-name { color: #28394d; font-size: .85rem; font-weight: 700; line-height: 1.4; }
+    .item-note-hint { color: var(--red); font-size: .72rem; font-weight: 700; }
+    .status-options { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+    .status-button { min-height: 31px; padding: 6px 9px; border: 1px solid #dfe5eb; border-radius: 8px; color: #58677a; background: white; font-size: .7rem; font-weight: 750; white-space: nowrap; }
+    .status-button[aria-pressed="true"][data-status="ok"] { border-color: #a8ddc7; color: var(--green); background: var(--green-soft); }
+    .status-button[aria-pressed="true"][data-status="fail"] { border-color: #efb8bc; color: var(--red); background: var(--red-soft); }
+    .status-button[aria-pressed="true"][data-status="na"] { border-color: #cfdae5; color: #506276; background: #edf2f6; }
+    .observation { grid-column: 1 / -1; }
+    .observation[hidden] { display: none; }
+    .empty-checklist { padding: 30px 22px; color: var(--muted); text-align: center; line-height: 1.5; }
+    .actions-panel { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; }
+    .save-state { color: var(--muted); font-size: .76rem; }
+    .side-panel { padding: 19px; }
+    .side-panel h2 { margin: 0; color: var(--navy); font-size: .98rem; }
+    .side-panel > p { margin: 6px 0 15px; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+    .summary-big { display: flex; align-items: baseline; gap: 7px; margin: 17px 0 4px; }
+    .summary-big strong { color: var(--navy); font-size: 2.2rem; letter-spacing: -.06em; }
+    .summary-big span { color: var(--muted); font-size: .82rem; }
+    .result-banner { margin-top: 14px; padding: 11px 12px; border-radius: 10px; color: #566477; background: #f2f5f8; font-size: .78rem; font-weight: 750; line-height: 1.45; }
+    .result-banner.good { color: var(--green); background: var(--green-soft); }
+    .result-banner.bad { color: var(--red); background: var(--red-soft); }
+    .history-list { display: grid; gap: 9px; }
+    .history-entry { padding: 11px; border: 1px solid #e7ebf0; border-radius: 10px; }
+    .history-entry strong { display: block; color: #344459; font-size: .8rem; }
+    .history-entry span { display: block; margin-top: 4px; color: var(--muted); font-size: .72rem; line-height: 1.4; }
+    .history-empty { margin: 0 !important; padding: 12px; border-radius: 9px; background: #f7f9fb; }
+    .local-note { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); color: var(--muted); font-size: .71rem; line-height: 1.5; }
+    .locked-note { margin: 0; padding: 12px 16px; color: #42546a; background: #eef3f8; font-size: .8rem; }
+    .locked-note[hidden] { display: none; }
+    footer { padding: 0 0 28px; color: var(--muted); text-align: center; font-size: .74rem; }
+    [hidden] { display: none !important; }
+
+    @media (max-width: 920px) {
+      .layout { grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; }
+      .identity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .span-3 { grid-column: span 2; }
+    }
+    @media (max-width: 700px) {
+      .topbar-inner, main { width: min(100% - 28px, 580px); }
+      .topbar-note { display: none; }
+      main { padding-top: 26px; }
+      .page-heading { align-items: flex-start; flex-direction: column; }
+      .header-actions { width: 100%; }
+      .layout { grid-template-columns: 1fr; }
+      .side-column { grid-row: 1; }
+      .side-panel.history { display: none; }
+      .identity-grid { padding: 4px 16px 17px; gap: 13px; }
+      .panel-heading { padding: 17px 16px 13px; }
+      .checklist-toolbar { padding: 15px 16px; }
+      .summary-pills { padding: 0 16px 14px; }
+      .groups { padding: 0 9px 9px; }
+      .inspection-item { grid-template-columns: 1fr; gap: 9px; padding: 12px; }
+      .status-options { justify-content: flex-start; }
+      .actions-panel { align-items: stretch; flex-direction: column; padding: 15px; }
+      .actions-panel .button { width: 100%; }
+      .save-state { text-align: center; }
+    }
+    @media (max-width: 430px) {
+      .identity-grid { grid-template-columns: 1fr; }
+      .span-2, .span-3 { grid-column: auto; }
+      .checklist-toolbar { align-items: stretch; flex-direction: column; }
+      .header-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .header-actions .button { padding-inline: 8px; font-size: .83rem; }
+      .status-button { flex: 1; }
+      .status-options { width: 100%; }
+    }
+    @media print {
+      body { background: white; }
+      .topbar, .header-actions, #notice, .side-column, .actions-panel, footer { display: none !important; }
+      main { width: 100%; padding: 0; }
+      .page-heading { margin: 0 0 15px; }
+      .layout { display: block; }
+      .main-column { display: block; }
+      .panel { margin-bottom: 12px; box-shadow: none; break-inside: avoid; }
+      .group { break-inside: avoid; }
+      .status-button { border-color: #aaa; }
+      .inspection-item { padding: 8px 10px; }
+      .field input, .field select { border-color: #bbb; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">✓</span><span>INSPEÇÃO DE FROTA</span></div>
+      <span class="topbar-note">Registro de segurança e condição operacional</span>
+    </div>
+  </div>
+
+  <main>
+    <header class="page-heading">
+      <div>
+        <p class="eyebrow">Operação · Inspeção diária</p>
+        <h1>Checklist do veículo</h1>
+        <p class="subtitle">Identifique o equipamento, registre as condições de cada item e documente qualquer não conformidade antes de iniciar a operação.</p>
+      </div>
+      <div class="header-actions">
+        <button class="button" id="print-report" type="button">Imprimir relatório</button>
+        <button class="button button-primary" id="new-checklist" type="button">+ Novo checklist</button>
+      </div>
+    </header>
+
+    <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+
+    <div class="layout">
+      <div class="main-column">
+        <section class="panel" aria-labelledby="identification-heading">
+          <div class="panel-heading">
+            <div>
+              <h2 id="identification-heading">Identificação da inspeção</h2>
+              <p>Os dados de abertura são registrados automaticamente e ficam vinculados a este checklist.</p>
+            </div>
+            <span class="section-number" aria-hidden="true">01</span>
+          </div>
+          <div class="identity-grid">
+            <div class="field span-2">
+              <label for="vehicle-type">Tipo de veículo ou equipamento <span aria-hidden="true">*</span></label>
+              <select id="vehicle-type" data-field="type">
+                <option value="">Selecione o tipo</option>
+                <option value="car">Carro / utilitário</option>
+                <option value="truck">Caminhão / ônibus</option>
+                <option value="machine">Máquina / equipamento</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="checklist-id">ID da inspeção</label>
+              <input id="checklist-id" type="text" readonly aria-readonly="true">
+            </div>
+            <div class="field">
+              <label for="opened-at">Checklist aberto em</label>
+              <input id="opened-at" type="text" readonly aria-readonly="true">
+            </div>
+            <div class="field span-2">
+              <label for="operator">Nome do operador <span aria-hidden="true">*</span></label>
+              <input id="operator" data-field="operator" maxlength="100" autocomplete="name" placeholder="Nome completo de quem realiza a inspeção">
+            </div>
+            <div class="field">
+              <label for="plate">Placa / registro</label>
+              <input id="plate" data-vehicle-field="plate" maxlength="20" placeholder="Ex.: ABC1D23">
+            </div>
+            <div class="field">
+              <label for="fleet-number">Número de frota / patrimônio</label>
+              <input id="fleet-number" data-vehicle-field="fleetNumber" maxlength="40" placeholder="Identificação interna">
+            </div>
+            <div class="field">
+              <label for="serial-number">Número de série / chassi</label>
+              <input id="serial-number" data-vehicle-field="serialNumber" maxlength="60" placeholder="Número de identificação">
+            </div>
+            <div class="field">
+              <label for="make-model">Marca e modelo</label>
+              <input id="make-model" data-vehicle-field="makeModel" maxlength="100" placeholder="Ex.: marca / modelo">
+            </div>
+            <div class="field">
+              <label for="color">Cor</label>
+              <input id="color" data-vehicle-field="color" maxlength="40" placeholder="Cor predominante">
+            </div>
+            <div class="field">
+              <label for="reading" id="reading-label">Quilometragem / horímetro</label>
+              <input id="reading" data-vehicle-field="reading" inputmode="decimal" maxlength="30" placeholder="Leitura atual">
+            </div>
+            <div class="field span-2">
+              <label for="location">Local da inspeção</label>
+              <input id="location" data-vehicle-field="location" maxlength="100" placeholder="Pátio, unidade ou frente de trabalho">
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="inspection-heading">
+          <div class="panel-heading">
+            <div>
+              <h2 id="inspection-heading">Itens de inspeção</h2>
+              <p>Marque uma situação para cada item. Registre uma observação sempre que identificar uma falha.</p>
+            </div>
+            <span class="section-number" aria-hidden="true">02</span>
+          </div>
+          <div id="empty-checklist" class="empty-checklist">Selecione o tipo de veículo ou equipamento para carregar os itens de inspeção correspondentes.</div>
+          <div id="checklist-content" hidden>
+            <div class="checklist-toolbar">
+              <div class="progress-area">
+                <div class="progress-meta"><span>Itens verificados</span><span id="progress-text">0 de 0</span></div>
+                <div class="progress-track" role="progressbar" id="progressbar" aria-label="Progresso do checklist" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div class="progress-fill" id="progress-fill"></div>
+                </div>
+              </div>
+              <span class="pill" id="completion-pill">Em andamento</span>
+            </div>
+            <div class="summary-pills" id="status-summary"></div>
+            <div class="groups" id="inspection-groups"></div>
+          </div>
+          <p class="locked-note" id="locked-note" hidden>Este checklist foi finalizado e está bloqueado para edição. Imprima o relatório ou inicie um novo checklist.</p>
+        </section>
+
+        <section class="panel actions-panel" aria-label="Ações do checklist">
+          <span class="save-state" id="save-state" aria-live="polite">Rascunho salvo neste navegador</span>
+          <button class="button button-primary" id="finish-checklist" type="button" disabled>Finalizar inspeção</button>
+        </section>
+      </div>
+
+      <aside class="side-column" aria-label="Resumo e histórico">
+        <section class="panel side-panel">
+          <h2>Resumo da inspeção</h2>
+          <p id="summary-description">Selecione um tipo para iniciar o checklist.</p>
+          <div class="summary-big"><strong id="summary-percent">0%</strong><span>respondidos</span></div>
+          <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="summary-fill"></div></div>
+          <div class="result-banner" id="result-banner">Aguardando identificação do veículo.</div>
+        </section>
+        <section class="panel side-panel history">
+          <h2>Inspeções recentes</h2>
+          <p>Últimos checklists finalizados neste navegador.</p>
+          <div class="history-list" id="history-list"></div>
+          <div class="local-note">Os dados ficam armazenados apenas neste navegador e dispositivo. Exporte/imprima os relatórios para manter uma cópia externa.</div>
+        </section>
+      </aside>
+    </div>
+  </main>
+  <footer>Inspecione o equipamento em local seguro. Em caso de falha crítica, não opere e comunique o responsável.</footer>
+
+  <script>
+    const commonSections = [
+      {
+        title: "Documentação e identificação",
+        items: [
+          ["documents", "Documento do veículo/equipamento e licenças aplicáveis disponíveis e válidos"],
+          ["identity-labels", "Placa, número de frota e identificação de segurança legíveis"],
+          ["registration", "Identificação do chassi ou número de série confere com o registro"],
+          ["operator-authorization", "Operador habilitado e autorizado para este veículo/equipamento"]
+        ]
+      },
+      {
+        title: "Estrutura, carroceria e rodagem",
+        items: [
+          ["structure", "Chassi, carroceria e estrutura sem trincas, deformações ou danos aparentes"],
+          ["doors-access", "Portas, travas, degraus, corrimãos e acessos firmes e funcionais"],
+          ["glass-mirrors", "Para-brisa, vidros, espelhos e retrovisores limpos, íntegros e ajustados"],
+          ["tires", "Pneus sem cortes, bolhas ou desgaste excessivo; calibragem adequada"],
+          ["wheels", "Rodas, aros, porcas e parafusos sem danos e com fixação segura"],
+          ["leaks-underbody", "Inspeção sob o veículo sem vazamentos ou peças soltas"]
+        ]
+      },
+      {
+        title: "Motor, fluidos e transmissão",
+        items: [
+          ["engine-oil", "Nível do óleo do motor dentro da faixa recomendada"],
+          ["coolant", "Nível do líquido de arrefecimento adequado e sem sinais de contaminação"],
+          ["brake-fluid", "Fluido de freio dentro da faixa, quando aplicável"],
+          ["fuel", "Combustível suficiente para a operação planejada; tampa e linhas sem vazamento"],
+          ["belts-hoses", "Mangueiras, correias, conexões e radiador sem danos ou vazamentos"],
+          ["battery", "Bateria e terminais firmes, limpos e sem corrosão excessiva"],
+          ["transmission", "Transmissão e embreagem sem ruídos, trancos ou vazamento aparente"]
+        ]
+      },
+      {
+        title: "Freios, direção e controles",
+        items: [
+          ["service-brake", "Freio de serviço com acionamento e resposta normais"],
+          ["parking-brake", "Freio de estacionamento segura o veículo/equipamento"],
+          ["steering", "Direção sem folga excessiva, travamento, ruído ou vibração anormal"],
+          ["pedals-controls", "Pedais, alavancas e comandos retornam e funcionam adequadamente"]
+        ]
+      },
+      {
+        title: "Sistema elétrico e sinalização",
+        items: [
+          ["headlights", "Faróis alto e baixo acendem e estão regulados"],
+          ["lights", "Lanternas, luzes de freio, ré e setas funcionam"],
+          ["beacon-horn", "Buzina, alarme de ré e sinalizador luminoso funcionam, quando existentes"],
+          ["dashboard", "Painel, indicadores e instrumentos sem alertas críticos"],
+          ["wipers", "Limpadores, lavador do para-brisa e desembaçador funcionam"]
+        ]
+      },
+      {
+        title: "Cabine e equipamentos de segurança",
+        items: [
+          ["seat-belt", "Cinto de segurança íntegro, trava e recolhimento funcionais"],
+          ["seat-cabin", "Banco, encosto, cabine e comandos com fixação adequada"],
+          ["fire-extinguisher", "Extintor presente, acessível, carregado e dentro da validade, quando exigido"],
+          ["emergency-kit", "Triângulo, macaco, chave de roda e estepe disponíveis, quando aplicável"],
+          ["safety-guards", "Proteções, tampas e dispositivos de segurança instalados e firmes"]
+        ]
+      },
+      {
+        title: "Partida e teste funcional",
+        items: [
+          ["starting", "Partida normal, sem dificuldade ou ruído anormal"],
+          ["idle-exhaust", "Motor em marcha lenta estável e escapamento sem fumaça ou ruído excessivo"],
+          ["operational-test", "Teste funcional em local seguro sem vibração, ruído ou comportamento anormal"]
+        ]
+      }
+    ];
+
+    const typeSections = {
+      car: [
+        {
+          title: "Verificações específicas — carro / utilitário",
+          items: [
+            ["car-spare", "Estepe, macaco e chave de roda presentes e em condições de uso"],
+            ["car-seatbelts", "Cintos de todos os assentos disponíveis e travando corretamente"],
+            ["car-airbags", "Indicador do airbag apaga após a partida, quando equipado"],
+            ["car-exhaust", "Sistema de escapamento fixo e sem vazamento aparente"],
+            ["car-climate", "Ventilação, ar-condicionado e desembaçamento operacionais"],
+            ["car-doors", "Capô, porta-malas, portas e vidros elétricos abrem e fecham adequadamente"]
+          ]
+        }
+      ],
+      truck: [
+        {
+          title: "Verificações específicas — caminhão / ônibus",
+          items: [
+            ["truck-air-brake", "Sistema de ar comprimido sem vazamento e com pressão operacional"],
+            ["truck-air-warning", "Avisos de baixa pressão e dispositivos de segurança pneumáticos funcionam"],
+            ["truck-retarder", "Freio auxiliar, retardador ou freio motor operacional, quando equipado"],
+            ["truck-fifth-wheel", "Quinta roda, pino-rei e travas sem dano e com acoplamento seguro"],
+            ["truck-connections", "Mangueiras de ar e conexões elétricas do reboque íntegras e fixadas"],
+            ["truck-trailer", "Reboque, engate, pés de apoio e sistema de iluminação verificados, quando aplicável"],
+            ["truck-load", "Carga distribuída, acondicionada e amarrada sem risco de deslocamento"],
+            ["truck-tachograph", "Tacógrafo e demais equipamentos obrigatórios presentes e operacionais"],
+            ["truck-tires", "Pneus internos/externos, estepe e para-barros em condições seguras"],
+            ["truck-mirrors", "Espelhos adicionais e câmeras de manobra limpos e funcionais"],
+            ["truck-exit", "Saídas de emergência e martelos identificados e acessíveis em ônibus"],
+            ["truck-coupling-test", "Acoplamento conferido e teste de freio do conjunto realizado em local seguro"]
+          ]
+        }
+      ],
+      machine: [
+        {
+          title: "Verificações específicas — máquina / equipamento",
+          items: [
+            ["machine-hydraulics", "Nível do fluido hidráulico adequado; bomba, reservatório e filtros sem vazamento"],
+            ["machine-hoses", "Mangueiras, cilindros, conexões e linhas hidráulicas sem abrasão ou dano"],
+            ["machine-attachment", "Implemento, caçamba ou acessório compatível, travado e com pinos seguros"],
+            ["machine-wear", "Dentes, lâmina, bordas cortantes e pontos de desgaste em condição operacional"],
+            ["machine-undercarriage", "Esteiras, roletes, rodas-guia e sapatas sem dano ou tensão inadequada"],
+            ["machine-outriggers", "Estabilizadores, patolas e travas firmes e operacionais, quando existentes"],
+            ["machine-rops", "Estrutura ROPS/FOPS, cabine e proteções sem dano ou alteração"],
+            ["machine-emergency-stop", "Parada de emergência e intertravamentos funcionam, quando equipados"],
+            ["machine-controls", "Comandos de elevação, giro, deslocamento e implementos respondem corretamente"],
+            ["machine-warning", "Alarme de ré, buzina, giroflex e sinalização sonora/visual funcionam"],
+            ["machine-steps", "Pontos de apoio, degraus, corrimãos e plataforma sem óleo ou obstrução"],
+            ["machine-work-area", "Área de trabalho e limites de operação verificados antes da movimentação"]
+          ]
+        }
+      ]
+    };
+
+    const DRAFT_KEY = "frota-checklist-draft-v1";
+    const HISTORY_KEY = "frota-checklist-history-v1";
+    const statusNames = { ok: "Conforme", fail: "Não conforme", na: "N/A" };
+    const notice = document.getElementById("notice");
+    let draft = readDraft();
+    let history = readHistory();
+
+    function showNotice(message) {
+      notice.textContent = message;
+      notice.hidden = false;
+    }
+
+    function readJson(key, fallback, validate) {
+      let raw;
+      try {
+        raw = localStorage.getItem(key);
+      } catch (error) {
+        showNotice(`Não foi possível acessar o armazenamento local do navegador: ${error.message}`);
+        return fallback;
+      }
+      if (raw === null) return fallback;
+      try {
+        const parsed = JSON.parse(raw);
+        if (validate(parsed)) return parsed;
+        showNotice("Um registro salvo está em formato inválido e não pôde ser carregado.");
+        return fallback;
+      } catch (error) {
+        showNotice(`Um registro salvo não pôde ser lido: ${error.message}`);
+        return fallback;
+      }
+    }
+
+    function readDraft() {
+      return readJson(DRAFT_KEY, createDraft(), (value) =>
+        value && typeof value === "object" && typeof value.openedAt === "string" &&
+        value.vehicle && typeof value.vehicle === "object" && value.answers && typeof value.answers === "object"
+      );
+    }
+
+    function readHistory() {
+      return readJson(HISTORY_KEY, [], Array.isArray);
+    }
+
+    function createDraft() {
+      return {
+        id: typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
+        openedAt: new Date().toISOString(),
+        finalizedAt: null,
+        operator: "",
+        vehicle: { type: "", plate: "", fleetNumber: "", serialNumber: "", makeModel: "", color: "", reading: "", location: "" },
+        answers: {}
+      };
+    }
+
+    function save(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        document.getElementById("save-state").textContent = `Salvo automaticamente às ${new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date())}`;
+        return true;
+      } catch (error) {
+        showNotice(`Não foi possível salvar no navegador: ${error.message}. Imprima o relatório para não perder as informações.`);
+        document.getElementById("save-state").textContent = "Falha ao salvar — imprima uma cópia";
+        return false;
+      }
+    }
+
+    function saveDraft() {
+      return save(DRAFT_KEY, draft);
+    }
+
+    function allSections() {
+      if (!draft.vehicle.type) return [];
+      return [...commonSections, ...typeSections[draft.vehicle.type]];
+    }
+
+    function allItems() {
+      return allSections().flatMap((section) => section.items.map(([id, label]) => ({ id, label, section: section.title })));
+    }
+
+    function formatDate(value) {
+      if (!value) return "—";
+      return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+    }
+
+    function vehicleName(vehicle) {
+      const typeNames = { car: "Carro / utilitário", truck: "Caminhão / ônibus", machine: "Máquina / equipamento" };
+      const identifier = vehicle.plate || vehicle.fleetNumber || vehicle.serialNumber || "Sem identificação";
+      return `${typeNames[vehicle.type] || "Veículo"} · ${identifier}`;
+    }
+
+    function setInputValues() {
+      document.getElementById("vehicle-type").value = draft.vehicle.type || "";
+      document.getElementById("operator").value = draft.operator || "";
+      document.getElementById("checklist-id").value = draft.id || "—";
+      document.getElementById("opened-at").value = formatDate(draft.openedAt);
+      document.querySelectorAll("[data-vehicle-field]").forEach((input) => {
+        input.value = draft.vehicle[input.dataset.vehicleField] || "";
+      });
+      const readingLabel = document.getElementById("reading-label");
+      readingLabel.textContent = draft.vehicle.type === "machine" ? "Horímetro" : "Quilometragem / horímetro";
+      document.getElementById("reading").placeholder = draft.vehicle.type === "machine" ? "Horas de operação" : "Leitura atual";
+    }
+
+    function renderChecklist() {
+      const content = document.getElementById("checklist-content");
+      const empty = document.getElementById("empty-checklist");
+      const container = document.getElementById("inspection-groups");
+      const sections = allSections();
+      const locked = Boolean(draft.finalizedAt);
+      content.hidden = !sections.length;
+      empty.hidden = Boolean(sections.length);
+      document.getElementById("locked-note").hidden = !locked;
+      if (!sections.length) {
+        container.replaceChildren();
+        updateSummary();
+        return;
+      }
+
+      container.replaceChildren();
+      sections.forEach((section) => {
+        const group = document.createElement("section");
+        group.className = "group";
+        const title = document.createElement("div");
+        title.className = "group-title";
+        const heading = document.createElement("span");
+        heading.textContent = section.title;
+        const count = document.createElement("span");
+        count.className = "group-count";
+        const answered = section.items.filter(([id]) => draft.answers[id]?.status).length;
+        count.textContent = `${answered}/${section.items.length} respondidos`;
+        title.append(heading, count);
+        group.append(title);
+
+        section.items.forEach(([id, label]) => {
+          const answer = draft.answers[id] || {};
+          const row = document.createElement("div");
+          row.className = `inspection-item${answer.status === "fail" ? " has-failure" : ""}`;
+          row.dataset.itemId = id;
+          const copy = document.createElement("div");
+          copy.className = "item-copy";
+          const name = document.createElement("span");
+          name.className = "item-name";
+          name.textContent = label;
+          copy.append(name);
+          if (answer.status === "fail" && !answer.note?.trim()) {
+            const hint = document.createElement("span");
+            hint.className = "item-note-hint";
+            hint.textContent = "Descreva a não conformidade";
+            copy.append(hint);
+          }
+
+          const options = document.createElement("div");
+          options.className = "status-options";
+          options.setAttribute("role", "group");
+          options.setAttribute("aria-label", `Situação: ${label}`);
+          [["ok", "Conforme"], ["fail", "Não conforme"], ["na", "N/A"]].forEach(([value, text]) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "status-button";
+            button.dataset.status = value;
+            button.dataset.itemId = id;
+            button.textContent = text;
+            button.setAttribute("aria-pressed", String(answer.status === value));
+            button.disabled = locked;
+            button.addEventListener("click", () => {
+              draft.answers[id] = { ...draft.answers[id], status: value, note: value === "fail" ? (draft.answers[id]?.note || "") : "" };
+              saveDraft();
+              renderChecklist();
+              document.querySelector(`.status-button[data-item-id="${id}"][data-status="${value}"]`)?.focus();
+            });
+            options.append(button);
+          });
+
+          row.append(copy, options);
+          if (answer.status === "fail") {
+            const noteField = document.createElement("div");
+            noteField.className = "field observation";
+            const noteLabel = document.createElement("label");
+            noteLabel.textContent = "Descreva a falha observada";
+            noteLabel.htmlFor = `note-${id}`;
+            const note = document.createElement("textarea");
+            note.id = `note-${id}`;
+            note.maxLength = 500;
+            note.placeholder = "Informe o problema, localização e qualquer detalhe importante.";
+            note.value = answer.note || "";
+            note.required = true;
+            note.disabled = locked;
+            note.addEventListener("input", () => {
+              draft.answers[id].note = note.value;
+              saveDraft();
+              updateSummary();
+            });
+            noteField.append(noteLabel, note);
+            row.append(noteField);
+          }
+          group.append(row);
+        });
+        container.append(group);
+      });
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const items = allItems();
+      const total = items.length;
+      const answers = items.map(({ id }) => draft.answers[id] || {});
+      const responded = answers.filter((answer) => answer.status).length;
+      const failures = answers.filter((answer) => answer.status === "fail").length;
+      const conforms = answers.filter((answer) => answer.status === "ok").length;
+      const notApplicable = answers.filter((answer) => answer.status === "na").length;
+      const percentage = total ? Math.round((responded / total) * 100) : 0;
+      document.getElementById("progress-text").textContent = `${responded} de ${total}`;
+      document.getElementById("progress-fill").style.width = `${percentage}%`;
+      document.getElementById("progressbar").setAttribute("aria-valuenow", String(percentage));
+      document.getElementById("summary-percent").textContent = `${percentage}%`;
+      document.getElementById("summary-fill").style.width = `${percentage}%`;
+      document.getElementById("summary-description").textContent = draft.vehicle.type ? vehicleName(draft.vehicle) : "Selecione um tipo para iniciar o checklist.";
+      const completion = document.getElementById("completion-pill");
+      completion.textContent = draft.finalizedAt ? "Finalizado" : (responded === total && total ? "Pronto para finalizar" : "Em andamento");
+      completion.className = `pill${draft.finalizedAt ? " pill-good" : ""}`;
+
+      const summary = document.getElementById("status-summary");
+      summary.replaceChildren();
+      [[`${conforms} conformes`, "pill-good"], [`${failures} não conformes`, failures ? "pill-bad" : ""], [`${notApplicable} não se aplicam`, ""]].forEach(([text, className]) => {
+        const pill = document.createElement("span");
+        pill.className = `pill ${className}`.trim();
+        pill.textContent = text;
+        summary.append(pill);
+      });
+
+      const result = document.getElementById("result-banner");
+      if (draft.finalizedAt) {
+        result.textContent = failures ? `Inspeção finalizada com ${failures} não conformidade(s). Avalie os riscos antes de liberar o equipamento.` : "Inspeção finalizada. Confirme as condições de uso antes de iniciar a operação.";
+        result.className = `result-banner ${failures ? "bad" : "good"}`;
+      } else if (failures) {
+        result.textContent = `${failures} não conformidade(s) identificada(s). Não opere em caso de falha crítica; comunique o responsável.`;
+        result.className = "result-banner bad";
+      } else {
+        result.textContent = "A inspeção não substitui os procedimentos de segurança da sua operação.";
+        result.className = "result-banner";
+      }
+      document.getElementById("finish-checklist").disabled = !total || Boolean(draft.finalizedAt);
+      document.getElementById("finish-checklist").textContent = draft.finalizedAt ? "Inspeção finalizada" : "Finalizar inspeção";
+      document.querySelectorAll("#vehicle-type, #operator, [data-vehicle-field]").forEach((input) => {
+        input.disabled = Boolean(draft.finalizedAt);
+      });
+    }
+
+    function renderHistory() {
+      const container = document.getElementById("history-list");
+      container.replaceChildren();
+      if (!history.length) {
+        const empty = document.createElement("p");
+        empty.className = "history-empty";
+        empty.textContent = "Nenhuma inspeção finalizada ainda.";
+        container.append(empty);
+        return;
+      }
+      history.slice(0, 5).forEach((record) => {
+        const entry = document.createElement("div");
+        entry.className = "history-entry";
+        const title = document.createElement("strong");
+        title.textContent = vehicleName(record.vehicle);
+        const detail = document.createElement("span");
+        const issues = Object.values(record.answers || {}).filter((answer) => answer.status === "fail").length;
+        detail.textContent = `${record.operator || "Operador não informado"} · ${formatDate(record.openedAt)} · ${issues} não conformidade(s)`;
+        entry.append(title, detail);
+        container.append(entry);
+      });
+    }
+
+    function updateInputsFromDraft() {
+      setInputValues();
+      renderChecklist();
+    }
+
+    document.getElementById("vehicle-type").addEventListener("change", (event) => {
+      if (draft.finalizedAt) return;
+      const previousType = draft.vehicle.type;
+      draft.vehicle.type = event.target.value;
+      if (previousType && previousType !== draft.vehicle.type) {
+        const validIds = new Set(allItems().map(({ id }) => id));
+        Object.keys(draft.answers).forEach((id) => {
+          if (!validIds.has(id)) delete draft.answers[id];
+        });
+      }
+      document.getElementById("reading-label").textContent = draft.vehicle.type === "machine" ? "Horímetro" : "Quilometragem / horímetro";
+      document.getElementById("reading").placeholder = draft.vehicle.type === "machine" ? "Horas de operação" : "Leitura atual";
+      saveDraft();
+      renderChecklist();
+    });
+
+    document.getElementById("operator").addEventListener("input", (event) => {
+      draft.operator = event.target.value;
+      saveDraft();
+    });
+
+    document.querySelectorAll("[data-vehicle-field]").forEach((input) => {
+      input.addEventListener("input", () => {
+        if (draft.finalizedAt) return;
+        draft.vehicle[input.dataset.vehicleField] = input.value;
+        saveDraft();
+        document.getElementById("summary-description").textContent = draft.vehicle.type ? vehicleName(draft.vehicle) : "Selecione um tipo para iniciar o checklist.";
+      });
+    });
+
+    document.getElementById("finish-checklist").addEventListener("click", () => {
+      const problems = [];
+      if (!draft.vehicle.type) problems.push("Selecione o tipo do veículo ou equipamento.");
+      if (!draft.operator.trim()) problems.push("Informe o nome do operador.");
+      if (draft.vehicle.type === "machine" && !draft.vehicle.fleetNumber.trim() && !draft.vehicle.serialNumber.trim()) {
+        problems.push("Informe o número de frota/patrimônio ou o número de série da máquina.");
+      }
+      if ((draft.vehicle.type === "car" || draft.vehicle.type === "truck") && !draft.vehicle.plate.trim()) {
+        problems.push("Informe a placa do veículo.");
+      }
+      const missing = allItems().filter(({ id }) => !draft.answers[id]?.status);
+      if (missing.length) problems.push(`${missing.length} item(ns) sem resposta; todos os itens devem ser verificados ou marcados como N/A.`);
+      const notesMissing = allItems().filter(({ id }) => draft.answers[id]?.status === "fail" && !draft.answers[id]?.note?.trim());
+      if (notesMissing.length) problems.push(`${notesMissing.length} não conformidade(s) sem observação.`);
+      if (problems.length) {
+        showNotice(`Não foi possível finalizar: ${problems.join(" ")}`);
+        if (!draft.vehicle.type) document.getElementById("vehicle-type").focus();
+        else if (!draft.operator.trim()) document.getElementById("operator").focus();
+        else if (missing.length) document.querySelector(".status-button[aria-pressed='false']")?.focus();
+        else document.querySelector(".observation textarea")?.focus();
+        return;
+      }
+
+      draft.finalizedAt = new Date().toISOString();
+      const record = JSON.parse(JSON.stringify(draft));
+      history.unshift(record);
+      history = history.slice(0, 100);
+      const historySaved = save(HISTORY_KEY, history);
+      const draftSaved = saveDraft();
+      renderHistory();
+      renderChecklist();
+      if (historySaved && draftSaved) {
+        notice.textContent = "Inspeção finalizada e registrada neste navegador. Use “Imprimir relatório” para guardar uma cópia.";
+        notice.hidden = false;
+      }
+    });
+
+    document.getElementById("new-checklist").addEventListener("click", () => {
+      const hasAnswers = Object.keys(draft.answers).length > 0 || draft.operator.trim() || draft.vehicle.type;
+      if (!draft.finalizedAt && hasAnswers && !window.confirm("Este checklist ainda não foi finalizado. Iniciar outro descartará o rascunho atual. Deseja continuar?")) return;
+      draft = createDraft();
+      saveDraft();
+      notice.hidden = true;
+      updateInputsFromDraft();
+    });
+
+    document.getElementById("print-report").addEventListener("click", () => window.print());
+
+    setInputValues();
+    renderChecklist();
+    renderHistory();
+  </script>
+</body>
+</html>

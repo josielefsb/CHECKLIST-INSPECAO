@@ -50,6 +50,7 @@
       </div>
       <div class="header-actions">
         <button class="button button-print" id="print-report" type="button">Imprimir relatório</button>
+        <button class="button" id="history-button" type="button">Histórico <span class="history-count" id="history-count">0</span></button>
         <button class="button button-primary" id="new-checklist" type="button">+ Novo checklist</button>
       </div>
     </header>
@@ -169,6 +170,14 @@
               <span class="pill" id="completion-pill">Em andamento</span>
             </div>
             <div class="summary-pills" id="status-summary"></div>
+            <div class="step-progress" id="step-progress" hidden>
+              <div>
+                <strong id="step-progress-title"></strong>
+                <span id="step-progress-hint"></span>
+              </div>
+              <button class="review-step" id="continue-checklist" type="button" hidden>Continuar checklist</button>
+            </div>
+            <div class="all-steps-done" id="all-steps-done" hidden><span aria-hidden="true">✓</span> Todas as etapas foram concluídas. Revise os dados e finalize a inspeção.</div>
             <div class="groups" id="inspection-groups"></div>
             <section class="general-comment" aria-labelledby="general-comment-heading">
               <label for="general-comment" id="general-comment-heading">Comentário geral da inspeção <span class="optional-label">Opcional</span></label>
@@ -233,6 +242,17 @@
         <button class="button button-primary" type="submit">Salvar nova senha</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog class="history-dialog" id="history-dialog" aria-labelledby="history-heading">
+    <div class="history-dialog-header">
+      <div>
+        <p class="eyebrow">Registros salvos neste navegador</p>
+        <h2 id="history-heading">Histórico de inspeções</h2>
+      </div>
+      <button class="dialog-close" id="close-history" type="button" aria-label="Fechar histórico">×</button>
+    </div>
+    <div class="history-dialog-list" id="history-dialog-list"></div>
   </dialog>
 </body>
 </html>

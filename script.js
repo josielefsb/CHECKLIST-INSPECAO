@@ -149,6 +149,7 @@
     let history = readHistory();
     let vehicles = readVehicles();
     let operators = readOperators();
+    let reviewSectionIndex = null;
 
     function showNotice(message) {
       notice.textContent = message;
@@ -360,18 +361,39 @@
       });
     }
 
-    function allSections() {
-      if (!draft.vehicle.type) return [];
-      return [...commonSections, ...typeSections[draft.vehicle.type]];
+    function sectionsForType(type) {
+      if (!type || !typeSections[type]) return [];
+      return [...commonSections, ...typeSections[type]];
     }
 
-    function allItems() {
-      return allSections().flatMap((section) => section.items.map(([id, label]) => ({
+    function allSections() {
+      return sectionsForType(draft.vehicle.type);
+    }
+
+    function itemsForType(type) {
+      return sectionsForType(type).flatMap((section) => section.items.map(([id, label]) => ({
         id,
         label,
         section: section.title,
         essential: ESSENTIAL_ITEM_IDS.has(id)
       })));
+    }
+
+    function allItems() {
+      return itemsForType(draft.vehicle.type);
+    }
+
+    function itemIsComplete(id) {
+      const answer = draft.answers[id];
+      return Boolean(answer?.status) && (answer.status !== "fail" || Boolean(answer.note?.trim()));
+    }
+
+    function sectionIsComplete(section) {
+      return section.items.every(([id]) => itemIsComplete(id));
+    }
+
+    function firstIncompleteSection(sections) {
+      return sections.findIndex((section) => !sectionIsComplete(section));
     }
 
     function calculateAptitude() {
@@ -431,9 +453,19 @@
       const container = document.getElementById("inspection-groups");
       const sections = allSections();
       const locked = Boolean(draft.finalizedAt);
+      const incompleteIndex = firstIncompleteSection(sections);
+      const activeIndex = reviewSectionIndex !== null && reviewSectionIndex < sections.length
+        ? reviewSectionIndex
+        : (incompleteIndex === -1 ? null : incompleteIndex);
+      if (activeIndex === null) reviewSectionIndex = null;
+
       content.hidden = !sections.length;
       empty.hidden = Boolean(sections.length);
       document.getElementById("locked-note").hidden = !locked;
+      document.getElementById("step-progress").hidden = !sections.length || activeIndex === null;
+      document.getElementById("continue-checklist").hidden = reviewSectionIndex === null;
+      document.getElementById("all-steps-done").hidden = !sections.length || incompleteIndex !== -1 || reviewSectionIndex !== null;
+      document.getElementById("general-comment").closest(".general-comment").hidden = !sections.length || incompleteIndex !== -1;
       if (!sections.length) {
         container.replaceChildren();
         updateSummary();
@@ -441,19 +473,58 @@
       }
 
       container.replaceChildren();
-      sections.forEach((section) => {
+      if (activeIndex !== null) {
+        document.getElementById("step-progress-title").textContent = reviewSectionIndex !== null
+          ? `Revisando etapa ${activeIndex + 1} de ${sections.length}`
+          : `Etapa ${activeIndex + 1} de ${sections.length}`;
+        document.getElementById("step-progress-hint").textContent = reviewSectionIndex !== null
+          ? "Você está revisando uma etapa já concluída. Volte ao checklist para continuar."
+        : "Responda cada item e descreva as falhas para liberar a próxima etapa.";
+      }
+
+      sections.forEach((section, index) => {
+        const answeredCount = section.items.filter(([id]) => itemIsComplete(id)).length;
+        const sectionComplete = sectionIsComplete(section);
+        if (!sectionComplete && index > activeIndex) return;
+
         const group = document.createElement("section");
-        group.className = "group";
+        const showItems = !sectionComplete || index === activeIndex;
+        group.className = `group${showItems ? " is-current" : " is-completed"}`;
         const title = document.createElement("div");
         title.className = "group-title";
+        const titleCopy = document.createElement("div");
+        titleCopy.className = "group-title-copy";
+        const stepLabel = document.createElement("span");
+        stepLabel.className = "group-step";
+        stepLabel.textContent = `Etapa ${index + 1} de ${sections.length}${sectionComplete ? " · Concluída" : ""}`;
         const heading = document.createElement("span");
         heading.textContent = section.title;
+        titleCopy.append(stepLabel, heading);
         const count = document.createElement("span");
         count.className = "group-count";
-        const answered = section.items.filter(([id]) => draft.answers[id]?.status).length;
-        count.textContent = `${answered}/${section.items.length} respondidos`;
-        title.append(heading, count);
+        count.textContent = `${answeredCount}/${section.items.length} respondidos`;
+        const titleActions = document.createElement("div");
+        titleActions.className = "group-title-actions";
+        titleActions.append(count);
+        if (sectionComplete && index !== activeIndex) {
+          const reviewButton = document.createElement("button");
+          reviewButton.type = "button";
+          reviewButton.className = "review-step";
+          reviewButton.textContent = "Revisar etapa";
+          reviewButton.addEventListener("click", () => {
+            reviewSectionIndex = index;
+            renderChecklist();
+            document.getElementById("inspection-heading").scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+          titleActions.append(reviewButton);
+        }
+        title.append(titleCopy, titleActions);
         group.append(title);
+
+        if (!showItems) {
+          container.append(group);
+          return;
+        }
 
         section.items.forEach(([id, label]) => {
           const answer = draft.answers[id] || {};
@@ -500,6 +571,7 @@
                 note: value === "fail" ? (draft.answers[id]?.note || "") : "",
                 photo: value === "fail" ? (draft.answers[id]?.photo || "") : ""
               };
+              reviewSectionIndex = null;
               saveDraft();
               renderChecklist();
               document.querySelector(`.status-button[data-item-id="${id}"][data-status="${value}"]`)?.focus();
@@ -526,6 +598,7 @@
               saveDraft();
               updateSummary();
             });
+            note.addEventListener("change", renderChecklist);
             noteField.append(noteLabel, note);
 
             const photoLabel = document.createElement("label");
@@ -590,7 +663,7 @@
       const items = allItems();
       const total = items.length;
       const answers = items.map(({ id }) => draft.answers[id] || {});
-      const responded = answers.filter((answer) => answer.status).length;
+      const responded = items.filter(({ id }) => itemIsComplete(id)).length;
       const failures = answers.filter((answer) => answer.status === "fail").length;
       const conforms = answers.filter((answer) => answer.status === "ok").length;
       const notApplicable = answers.filter((answer) => answer.status === "na").length;
@@ -654,7 +727,11 @@
           : "O status de aptidão será calculado após todos os itens serem verificados.";
         result.className = "result-banner";
       }
-      document.getElementById("finish-checklist").disabled = !total || Boolean(draft.finalizedAt);
+      const unresolvedItems = items.some(({ id }) => {
+        const answer = draft.answers[id];
+        return !answer?.status || (answer.status === "fail" && !answer.note?.trim());
+      });
+      document.getElementById("finish-checklist").disabled = !total || unresolvedItems || Boolean(draft.finalizedAt);
       document.getElementById("finish-checklist").textContent = draft.finalizedAt ? "Inspeção finalizada" : "Finalizar inspeção";
       document.querySelectorAll("#vehicle-type, #operator, [data-vehicle-field]").forEach((input) => {
         input.disabled = Boolean(draft.finalizedAt);
@@ -665,13 +742,21 @@
     function renderHistory() {
       const container = document.getElementById("history-list");
       container.replaceChildren();
+      document.getElementById("history-count").textContent = String(history.length);
+      const dialogContainer = document.getElementById("history-dialog-list");
+      dialogContainer.replaceChildren();
       if (!history.length) {
         const empty = document.createElement("p");
         empty.className = "history-empty";
         empty.textContent = "Nenhuma inspeção finalizada ainda.";
         container.append(empty);
+        const dialogEmpty = document.createElement("p");
+        dialogEmpty.className = "history-empty-large";
+        dialogEmpty.textContent = "Ainda não há checklists realizados. As inspeções aparecerão aqui após serem finalizadas.";
+        dialogContainer.append(dialogEmpty);
         return;
       }
+
       history.slice(0, 5).forEach((record) => {
         const entry = document.createElement("div");
         entry.className = "history-entry";
@@ -683,6 +768,103 @@
         detail.textContent = `${record.operator || "Operador não informado"} · ${formatDate(record.openedAt)} · ${aptitudeLabel} · ${issues} não conformidade(s)`;
         entry.append(title, detail);
         container.append(entry);
+      });
+
+      history.forEach((record) => {
+        const recordItems = itemsForType(record.vehicle?.type);
+        const failedCount = recordItems.filter(({ id }) => record.answers?.[id]?.status === "fail").length;
+        const criticalFailure = recordItems.some(({ id, essential }) => essential && record.answers?.[id]?.status === "fail");
+        const essentialItems = recordItems.filter(({ essential }) => essential);
+        const essentialsConfirmed = essentialItems.every(({ id }) => record.answers?.[id]?.status === "ok");
+        const aptitude = record.aptitude || (criticalFailure ? "unfit" : essentialsConfirmed ? "fit" : "pending");
+        const aptitudeLabel = aptitude === "fit" ? "Apto" : aptitude === "unfit" ? "Não apto" : "Pendente";
+
+        const details = document.createElement("details");
+        details.className = "history-record";
+        const summary = document.createElement("summary");
+        const titleWrap = document.createElement("span");
+        titleWrap.className = "history-record-title";
+        const title = document.createElement("strong");
+        title.textContent = `${vehicleName(record.vehicle)} · ${record.id || "Inspeção"}`;
+        const subtitle = document.createElement("span");
+        subtitle.textContent = `${record.operator || "Operador não informado"} · ${formatDate(record.openedAt)}`;
+        titleWrap.append(title, subtitle);
+        const badge = document.createElement("span");
+        badge.className = `pill${aptitude === "fit" ? " pill-good" : aptitude === "unfit" ? " pill-bad" : " pill-warn"}`;
+        badge.textContent = aptitudeLabel;
+        summary.append(titleWrap, badge);
+        details.append(summary);
+
+        const content = document.createElement("div");
+        content.className = "history-record-content";
+        const metadata = document.createElement("div");
+        metadata.className = "history-metadata";
+        [
+          ["Tipo", vehicleName(record.vehicle)],
+          ["Operador", record.operator || "—"],
+          ["Iniciado", formatDate(record.openedAt)],
+          ["Finalizado", formatDate(record.finalizedAt)],
+          ["Placa / registro", record.vehicle?.plate || "—"],
+          ["Frota / patrimônio", record.vehicle?.fleetNumber || "—"],
+          ["Série / chassi", record.vehicle?.serialNumber || "—"],
+          ["Marca e modelo", record.vehicle?.makeModel || "—"],
+          ["Cor", record.vehicle?.color || "—"],
+          ["Quilometragem / horímetro", record.vehicle?.reading || "—"],
+          ["Local", record.vehicle?.location || "—"],
+          ["Resultado", `${aptitudeLabel} · ${failedCount} não conformidade(s)`]
+        ].forEach(([label, value]) => {
+          const cell = document.createElement("div");
+          const key = document.createElement("span");
+          key.textContent = label;
+          const text = document.createElement("strong");
+          text.textContent = value;
+          cell.append(key, text);
+          metadata.append(cell);
+        });
+        content.append(metadata);
+
+        sectionsForType(record.vehicle?.type).forEach((section) => {
+          const answerGroup = document.createElement("section");
+          answerGroup.className = "history-answer-group";
+          const heading = document.createElement("h3");
+          heading.textContent = section.title;
+          answerGroup.append(heading);
+          section.items.forEach(([id, label]) => {
+            const answer = record.answers?.[id] || {};
+            const item = document.createElement("div");
+            item.className = "history-answer";
+            const itemName = document.createElement("span");
+            itemName.textContent = label;
+            const status = document.createElement("span");
+            status.className = `history-answer-status ${answer.status || ""}`;
+            status.textContent = statusNames[answer.status] || "Sem resposta";
+            item.append(itemName, status);
+            if (answer.note) {
+              const note = document.createElement("span");
+              note.className = "history-answer-note";
+              note.textContent = `Observação: ${answer.note}`;
+              item.append(note);
+            }
+            if (answer.photo) {
+              const photo = document.createElement("img");
+              photo.className = "history-photo";
+              photo.src = answer.photo;
+              photo.alt = `Foto anexada: ${label}`;
+              item.append(photo);
+            }
+            answerGroup.append(item);
+          });
+          content.append(answerGroup);
+        });
+
+        if (record.comment?.trim()) {
+          const comment = document.createElement("div");
+          comment.className = "history-comment";
+          comment.textContent = `Comentário geral: ${record.comment}`;
+          content.append(comment);
+        }
+        details.append(content);
+        dialogContainer.append(details);
       });
     }
 
@@ -717,6 +899,7 @@
         }
         draft.vehicle = { type: "", plate: "", fleetNumber: "", serialNumber: "", makeModel: "", color: "", reading: "", location: "" };
         clearInspectionProgress();
+        reviewSectionIndex = null;
         saveDraft();
         setInputValues();
         renderChecklist();
@@ -734,7 +917,10 @@
         return;
       }
       draft.vehicle = { ...selectedVehicle.details, type: selectedVehicle.type };
-      if (currentVehicle?.id !== selectedVehicle.id) clearInspectionProgress();
+      if (currentVehicle?.id !== selectedVehicle.id) {
+        clearInspectionProgress();
+        reviewSectionIndex = null;
+      }
       saveDraft();
       setInputValues();
       renderChecklist();
@@ -817,6 +1003,7 @@
       const previousType = draft.vehicle.type;
       draft.vehicle.type = event.target.value;
       if (previousType && previousType !== draft.vehicle.type) {
+        reviewSectionIndex = null;
         const validIds = new Set(allItems().map(({ id }) => id));
         Object.keys(draft.answers).forEach((id) => {
           if (!validIds.has(id)) delete draft.answers[id];
@@ -894,6 +1081,7 @@
       const hasAnswers = Object.keys(draft.answers).length > 0 || draft.operator.trim() || draft.vehicle.type;
       if (!draft.finalizedAt && hasAnswers && !window.confirm("Este checklist ainda não foi finalizado. Iniciar outro descartará o rascunho atual. Deseja continuar?")) return;
       draft = createDraft();
+      reviewSectionIndex = null;
       saveDraft();
       notice.hidden = true;
       document.getElementById("saved-vehicle").value = "";
@@ -902,6 +1090,18 @@
     });
 
     document.getElementById("print-report").addEventListener("click", () => window.print());
+    document.getElementById("continue-checklist").addEventListener("click", () => {
+      reviewSectionIndex = null;
+      renderChecklist();
+      document.getElementById("inspection-heading").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    const historyDialog = document.getElementById("history-dialog");
+    document.getElementById("history-button").addEventListener("click", () => {
+      renderHistory();
+      historyDialog.showModal();
+    });
+    document.getElementById("close-history").addEventListener("click", () => historyDialog.close());
 
     async function passwordHash(password) {
       if (!crypto.subtle) {

@@ -1,6 +1,8 @@
     const commonSections = [
       {
         title: "Documentação e identificação",
+        illustration: "documents",
+        guidance: "Confira documentos, licenças e identificações do veículo e do operador.",
         items: [
           ["documents", "Documento do veículo/equipamento e licenças aplicáveis disponíveis e válidos"],
           ["identity-labels", "Placa, número de frota e identificação de segurança legíveis"],
@@ -10,6 +12,8 @@
       },
       {
         title: "Estrutura, carroceria e rodagem",
+        illustration: "structure",
+        guidance: "Observe a estrutura, os acessos, os pneus e as rodas antes de iniciar.",
         items: [
           ["structure", "Chassi, carroceria e estrutura sem trincas, deformações ou danos aparentes"],
           ["doors-access", "Portas, travas, degraus, corrimãos e acessos firmes e funcionais"],
@@ -21,6 +25,8 @@
       },
       {
         title: "Motor, fluidos e transmissão",
+        illustration: "engine",
+        guidance: "Verifique níveis, componentes, vazamentos e sinais de desgaste.",
         items: [
           ["engine-oil", "Nível do óleo do motor dentro da faixa recomendada"],
           ["coolant", "Nível do líquido de arrefecimento adequado e sem sinais de contaminação"],
@@ -33,6 +39,8 @@
       },
       {
         title: "Freios, direção e controles",
+        illustration: "controls",
+        guidance: "Teste freios, direção e comandos em condições seguras.",
         items: [
           ["service-brake", "Freio de serviço com acionamento e resposta normais"],
           ["parking-brake", "Freio de estacionamento segura o veículo/equipamento"],
@@ -42,6 +50,8 @@
       },
       {
         title: "Sistema elétrico e sinalização",
+        illustration: "electrical",
+        guidance: "Confira luzes, alertas, buzina e demais componentes elétricos.",
         items: [
           ["headlights", "Faróis alto e baixo acendem e estão regulados"],
           ["lights", "Lanternas, luzes de freio, ré e setas funcionam"],
@@ -52,6 +62,8 @@
       },
       {
         title: "Cabine e equipamentos de segurança",
+        illustration: "safety",
+        guidance: "Confirme os equipamentos de proteção, emergência e acesso à cabine.",
         items: [
           ["seat-belt", "Cinto de segurança íntegro, trava e recolhimento funcionais"],
           ["seat-cabin", "Banco, encosto, cabine e comandos com fixação adequada"],
@@ -62,6 +74,8 @@
       },
       {
         title: "Partida e teste funcional",
+        illustration: "test",
+        guidance: "Faça a partida e o teste funcional em local seguro, observando ruídos e respostas.",
         items: [
           ["starting", "Partida normal, sem dificuldade ou ruído anormal"],
           ["idle-exhaust", "Motor em marcha lenta estável e escapamento sem fumaça ou ruído excessivo"],
@@ -74,6 +88,8 @@
       car: [
         {
           title: "Verificações específicas — carro / utilitário",
+          illustration: "car",
+          guidance: "Revise os itens próprios de carros e utilitários, incluindo estepe, cintos e cabine.",
           items: [
             ["car-spare", "Estepe, macaco e chave de roda presentes e em condições de uso"],
             ["car-seatbelts", "Cintos de todos os assentos disponíveis e travando corretamente"],
@@ -87,6 +103,8 @@
       truck: [
         {
           title: "Verificações específicas — caminhão / ônibus",
+          illustration: "truck",
+          guidance: "Confira o conjunto veicular, os sistemas pneumáticos, a carga e as saídas de emergência.",
           items: [
             ["truck-air-brake", "Sistema de ar comprimido sem vazamento e com pressão operacional"],
             ["truck-air-warning", "Avisos de baixa pressão e dispositivos de segurança pneumáticos funcionam"],
@@ -106,6 +124,8 @@
       machine: [
         {
           title: "Verificações específicas — máquina / equipamento",
+          illustration: "machine",
+          guidance: "Inspecione implementos, hidráulica, comandos, estabilizadores e área de trabalho.",
           items: [
             ["machine-hydraulics", "Nível do fluido hidráulico adequado; bomba, reservatório e filtros sem vazamento"],
             ["machine-hoses", "Mangueiras, cilindros, conexões e linhas hidráulicas sem abrasão ou dano"],
@@ -122,6 +142,19 @@
           ]
         }
       ]
+    };
+
+    const SECTION_ILLUSTRATIONS = {
+      documents: '<svg viewBox="0 0 64 64"><path d="M17 8h22l10 10v37H17z"/><path d="M39 8v12h10M24 30h18M24 38h18M24 46h8"/><circle cx="47" cy="47" r="11" class="accent-fill"/><path d="m42 47 4 4 7-9" class="accent-stroke"/></svg>',
+      structure: '<svg viewBox="0 0 64 64"><path d="M7 27h31v20H7zM38 33h11l8 9v5H38z"/><path d="M12 27l5-10h17l4 10"/><circle cx="19" cy="48" r="6"/><circle cx="48" cy="48" r="6"/><path d="M13 34h9M27 34h7" class="accent-stroke"/></svg>',
+      engine: '<svg viewBox="0 0 64 64"><path d="M16 22h30v28H16zM46 30h8v14h-8M10 29h6M10 39h6M22 16v6M39 16v6M24 31l-5 9h9l-3 8 12-13h-9l3-4z"/><path d="M54 12v9M50 16h8" class="accent-stroke"/></svg>',
+      controls: '<svg viewBox="0 0 64 64"><circle cx="31" cy="34" r="21"/><circle cx="31" cy="34" r="7"/><path d="M31 13v14M12 25l13 6M50 25l-13 6M17 49l10-10M45 49 35 39"/><path d="M48 12h9v9" class="accent-stroke"/></svg>',
+      electrical: '<svg viewBox="0 0 64 64"><path d="M35 7 17 35h13l-3 22 21-31H35z" class="accent-fill"/><path d="M35 7 17 35h13l-3 22 21-31H35z" class="accent-stroke"/><path d="M9 15h10M6 22h8M48 12l6-5M51 20h8"/></svg>',
+      safety: '<svg viewBox="0 0 64 64"><path d="M32 7 52 15v15c0 13-8 22-20 28C20 52 12 43 12 30V15z"/><path d="m22 32 7 7 14-16" class="accent-stroke"/></svg>',
+      test: '<svg viewBox="0 0 64 64"><circle cx="32" cy="34" r="22"/><path d="M32 12v6M10 34h6M48 34h6M32 34l12-10"/><path d="M27 42V26l14 8z" class="accent-fill"/><path d="M27 42V26l14 8z" class="accent-stroke"/></svg>',
+      car: '<svg viewBox="0 0 64 64"><path d="M9 35l4-13h37l6 13v14H9zM13 35h42M18 22l5-9h18l8 9"/><circle cx="19" cy="49" r="5"/><circle cx="47" cy="49" r="5"/><path d="M18 29h10M36 29h10" class="accent-stroke"/></svg>',
+      truck: '<svg viewBox="0 0 64 64"><path d="M6 18h32v29H6zM38 27h11l9 10v10H38z"/><path d="M43 28v10h14M12 24h20M12 31h15" class="accent-stroke"/><circle cx="17" cy="49" r="5"/><circle cx="48" cy="49" r="5"/></svg>',
+      machine: '<svg viewBox="0 0 64 64"><path d="M8 44h27l5 8H13zM18 43V29h17v15M20 29l2-9h11l3 9M35 31l8-10 7 4-8 13M48 25l8 5-5 9-8-5M17 51h30"/><circle cx="22" cy="46" r="4" class="accent-fill"/><circle cx="33" cy="46" r="4" class="accent-fill"/><path d="m42 20 5-7 6 4" class="accent-stroke"/></svg>'
     };
 
     const ESSENTIAL_ITEM_IDS = new Set([
@@ -142,7 +175,10 @@
     const VEHICLES_KEY = "frota-checklist-vehicles-v1";
     const OPERATORS_KEY = "frota-checklist-operators-v1";
     const AUTH_KEY = "frota-checklist-password-sha256-v1";
+    const USER_KEY = "frota-checklist-user-v1";
+    const USER_ROLE_KEY = "frota-checklist-user-role-v1";
     const INITIAL_PASSWORD = "123456";
+    const EDIT_LOCK_MS = 5 * 60 * 1000;
     const statusNames = { ok: "Conforme", fail: "Não conforme", na: "N/A" };
     const notice = document.getElementById("notice");
     let draft = readDraft();
@@ -150,6 +186,8 @@
     let vehicles = readVehicles();
     let operators = readOperators();
     let reviewSectionIndex = null;
+    let currentRole = "manager";
+    let editingVehicleId = null;
 
     function showNotice(message) {
       notice.textContent = message;
@@ -222,6 +260,10 @@
       return null;
     }
 
+    function vehicleIsActive(vehicle) {
+      return vehicle.active !== false;
+    }
+
     function findSavedVehicle(vehicle) {
       for (const field of ["serialNumber", "plate", "fleetNumber"]) {
         const value = vehicle[field]?.trim();
@@ -239,25 +281,24 @@
       const vehicleSelect = document.getElementById("saved-vehicle");
       const selectedVehicle = vehicleSelect.value;
       vehicleSelect.replaceChildren();
-      [
-        ["", "Selecione um veículo salvo ou cadastre um novo"],
-        ["__new__", "+ Cadastrar novo veículo"]
-      ].forEach(([value, label]) => {
+      const vehicleOptions = [["", vehicles.some(vehicleIsActive) ? "Selecione um veículo ativo" : "Nenhum veículo ativo — solicite o cadastro à gerência"]];
+      if (currentRole === "manager") vehicleOptions.push(["__new__", "+ Informar / cadastrar veículo"]);
+      vehicleOptions.forEach(([value, label]) => {
         const option = document.createElement("option");
         option.value = value;
         option.textContent = label;
         vehicleSelect.append(option);
       });
-      vehicles.forEach((vehicle) => {
+      vehicles.filter((vehicle) => vehicleIsActive(vehicle) && (!document.getElementById("vehicle-type").value || vehicle.type === document.getElementById("vehicle-type").value)).forEach((vehicle) => {
         const option = document.createElement("option");
         option.value = vehicle.id;
         const identifiers = [vehicle.details.plate, vehicle.details.fleetNumber, vehicle.details.serialNumber].filter(Boolean);
         option.textContent = `${vehicleName({ ...vehicle.details, type: vehicle.type })}${vehicle.details.makeModel ? ` · ${vehicle.details.makeModel}` : ""}${identifiers.length > 1 ? ` · ${vehicle.details.serialNumber || vehicle.details.fleetNumber}` : ""}`;
         vehicleSelect.append(option);
       });
-      vehicleSelect.value = vehicles.some((vehicle) => vehicle.id === selectedVehicle)
+      vehicleSelect.value = vehicles.some((vehicle) => vehicle.id === selectedVehicle && vehicleIsActive(vehicle))
         ? selectedVehicle
-        : (selectedVehicle === "__new__" ? "__new__" : (findSavedVehicle(draft.vehicle)?.id || (vehicleIdentity(draft.vehicle) ? "__new__" : "")));
+        : (selectedVehicle === "__new__" ? "__new__" : ((vehicles.find((vehicle) => vehicle.id === findSavedVehicle(draft.vehicle)?.id && vehicleIsActive(vehicle))?.id) || (vehicleIdentity(draft.vehicle) ? "__new__" : "")));
 
       const operatorSelect = document.getElementById("saved-operator");
       const selectedOperator = operatorSelect.value;
@@ -284,11 +325,126 @@
         ? selectedOperator
         : (selectedOperator === "__new__" ? "__new__" : (operators.find((operator) => normalize(operator.name) === normalize(draft.operator || ""))?.id || (draft.operator ? "__new__" : "")));
 
-      const locked = Boolean(draft.finalizedAt);
+      const locked = isDraftLocked();
       vehicleSelect.disabled = locked;
       operatorSelect.disabled = locked;
       document.getElementById("save-vehicle").disabled = locked;
+      document.getElementById("save-vehicle").hidden = currentRole !== "manager";
       document.getElementById("save-operator").disabled = locked;
+      const protectedVehicleFields = new Set(["plate", "fleetNumber", "serialNumber", "makeModel", "color"]);
+      document.querySelectorAll("[data-vehicle-field]").forEach((input) => {
+        input.readOnly = currentRole === "collaborator" && protectedVehicleFields.has(input.dataset.vehicleField);
+      });
+    }
+
+    function renderManagedVehicles() {
+      const container = document.getElementById("managed-vehicle-list");
+      container.replaceChildren();
+      if (!vehicles.length) {
+        const empty = document.createElement("div");
+        empty.className = "managed-vehicle-empty";
+        empty.textContent = "Nenhum veículo cadastrado. Use “Novo veículo” para incluir o primeiro.";
+        container.append(empty);
+        return;
+      }
+      vehicles.slice().sort((first, second) => vehicleName({ ...first.details, type: first.type }).localeCompare(vehicleName({ ...second.details, type: second.type }), "pt-BR")).forEach((vehicle) => {
+        const entry = document.createElement("div");
+        entry.className = `managed-vehicle-entry${vehicleIsActive(vehicle) ? "" : " inactive"}`;
+        const copy = document.createElement("div");
+        copy.className = "managed-vehicle-copy";
+        const name = document.createElement("strong");
+        name.textContent = `${vehicleName({ ...vehicle.details, type: vehicle.type })}${vehicle.details.makeModel ? ` · ${vehicle.details.makeModel}` : ""}`;
+        const info = document.createElement("span");
+        info.textContent = [vehicle.details.plate, vehicle.details.fleetNumber && `Frota ${vehicle.details.fleetNumber}`, vehicle.details.serialNumber && `Série ${vehicle.details.serialNumber}`, vehicle.details.color].filter(Boolean).join(" · ") || "Sem identificadores adicionais";
+        const state = document.createElement("span");
+        state.className = `managed-vehicle-state${vehicleIsActive(vehicle) ? "" : " inactive-state"}`;
+        state.textContent = vehicleIsActive(vehicle) ? "Ativo · disponível para inspeção" : "Inativo · indisponível para seleção";
+        copy.append(name, info, state);
+        const actions = document.createElement("div");
+        actions.className = "managed-vehicle-actions";
+        const editButton = document.createElement("button");
+        editButton.type = "button";
+        editButton.className = "button";
+        editButton.textContent = "Editar";
+        editButton.addEventListener("click", () => showManagedVehicleForm(vehicle));
+        const activeButton = document.createElement("button");
+        activeButton.type = "button";
+        activeButton.className = "button";
+        activeButton.textContent = vehicleIsActive(vehicle) ? "Desativar" : "Ativar";
+        activeButton.addEventListener("click", () => setManagedVehicleActive(vehicle.id, !vehicleIsActive(vehicle)));
+        actions.append(editButton, activeButton);
+        entry.append(copy, actions);
+        container.append(entry);
+      });
+    }
+
+    const managedVehicleForm = document.getElementById("managed-vehicle-form");
+    const managedVehicleFields = {
+      type: "managed-type", plate: "managed-plate", fleetNumber: "managed-fleet",
+      serialNumber: "managed-serial", makeModel: "managed-make-model", color: "managed-color",
+      reading: "managed-reading", location: "managed-location"
+    };
+
+    function showManagedVehicleForm(vehicle = null) {
+      if (currentRole !== "manager") return;
+      editingVehicleId = vehicle?.id || null;
+      document.getElementById("managed-vehicle-form-heading").textContent = vehicle ? "Editar veículo" : "Cadastrar veículo";
+      document.getElementById("managed-vehicle-error").hidden = true;
+      Object.entries(managedVehicleFields).forEach(([key, id]) => {
+        const value = key === "type" ? vehicle?.type : vehicle?.details?.[key];
+        document.getElementById(id).value = value || "";
+      });
+      managedVehicleForm.hidden = false;
+      managedVehicleForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      document.getElementById("managed-type").focus();
+    }
+
+    function setManagedVehicleActive(vehicleId, active) {
+      if (currentRole !== "manager") return;
+      const nextVehicles = vehicles.map((vehicle) => vehicle.id === vehicleId ? { ...vehicle, active } : vehicle);
+      if (!saveRegistry(VEHICLES_KEY, nextVehicles)) return;
+      vehicles = nextVehicles;
+      renderManagedVehicles();
+      renderRegistries();
+      showNotice(active ? "Veículo ativado e disponível para novas inspeções." : "Veículo inativado e removido das opções de novas inspeções.");
+    }
+
+    function saveManagedVehicle(event) {
+      event.preventDefault();
+      if (currentRole !== "manager") return;
+      const details = Object.fromEntries(Object.entries(managedVehicleFields).filter(([key]) => key !== "type").map(([key, id]) => [key, document.getElementById(id).value.trim()]));
+      const type = document.getElementById("managed-type").value;
+      const errorElement = document.getElementById("managed-vehicle-error");
+      errorElement.hidden = true;
+      if (!type) {
+        errorElement.textContent = "Selecione o tipo do veículo ou equipamento.";
+        errorElement.hidden = false;
+        return;
+      }
+      if (!details.plate && !details.fleetNumber && !details.serialNumber) {
+        errorElement.textContent = "Informe placa, frota/patrimônio ou número de série/chassi.";
+        errorElement.hidden = false;
+        return;
+      }
+      const existing = vehicles.find((vehicle) => vehicle.id === editingVehicleId);
+      const duplicate = findSavedVehicle({ ...details, type });
+      if (duplicate && duplicate.id !== editingVehicleId) {
+        errorElement.textContent = "Já existe um veículo do mesmo tipo com essa placa, frota ou número de série.";
+        errorElement.hidden = false;
+        return;
+      }
+      const savedVehicle = { id: existing?.id || newId(), type, details, active: existing ? vehicleIsActive(existing) : true };
+      const nextVehicles = existing
+        ? vehicles.map((vehicle) => vehicle.id === existing.id ? savedVehicle : vehicle)
+        : [...vehicles, savedVehicle];
+      if (!saveRegistry(VEHICLES_KEY, nextVehicles)) return;
+      vehicles = nextVehicles;
+      renderManagedVehicles();
+      renderRegistries();
+      managedVehicleForm.reset();
+      managedVehicleForm.hidden = true;
+      editingVehicleId = null;
+      showNotice(existing ? "Cadastro do veículo atualizado." : "Veículo cadastrado e ativo para inspeções.");
     }
 
     function saveRegistry(key, value) {
@@ -326,7 +482,58 @@
     }
 
     function saveDraft() {
-      return save(DRAFT_KEY, draft);
+      if (draft.finalizedAt && !isDraftLocked()) {
+        draft.aptitude = calculateAptitude().status;
+        draft.editedAt = new Date().toISOString();
+      }
+      const draftSaved = save(DRAFT_KEY, draft);
+      if (draft.finalizedAt && !isDraftLocked()) {
+        const index = history.findIndex((record) => record.id === draft.id);
+        const updatedRecord = JSON.parse(JSON.stringify(draft));
+        if (index >= 0) history[index] = updatedRecord;
+        else history.unshift(updatedRecord);
+        const historySaved = save(HISTORY_KEY, history);
+        return draftSaved && historySaved;
+      }
+      return draftSaved;
+    }
+
+    function isDraftLocked() {
+      if (!draft.finalizedAt) return false;
+      const finalizedTime = Date.parse(draft.finalizedAt);
+      return !Number.isFinite(finalizedTime) || Date.now() - finalizedTime < EDIT_LOCK_MS;
+    }
+
+    function updateLockedNote() {
+      const note = document.getElementById("locked-note");
+      const finalizedTime = Date.parse(draft.finalizedAt);
+      const remaining = Number.isFinite(finalizedTime) ? Math.max(0, EDIT_LOCK_MS - (Date.now() - finalizedTime)) : EDIT_LOCK_MS;
+      if (isDraftLocked()) {
+        const minutes = Math.floor(remaining / 60000).toString().padStart(2, "0");
+        const seconds = Math.ceil((remaining % 60000) / 1000).toString().padStart(2, "0");
+        document.getElementById("locked-note-text").textContent = `Checklist finalizado. A edição será liberada em ${minutes}:${seconds}. Você também pode excluí-lo.`;
+      } else {
+        document.getElementById("locked-note-text").textContent = "Prazo de bloqueio encerrado. Este checklist pode ser editado; as alterações atualizam o registro no histórico automaticamente.";
+      }
+      note.hidden = !draft.finalizedAt;
+    }
+
+    function scheduleEditUnlock() {
+      if (window.editUnlockTimer) window.clearTimeout(window.editUnlockTimer);
+      if (window.editCountdownTimer) window.clearInterval(window.editCountdownTimer);
+      if (!draft.finalizedAt || !isDraftLocked()) return;
+      const finalizedTime = Date.parse(draft.finalizedAt);
+      if (!Number.isFinite(finalizedTime)) return;
+      const delay = Math.max(0, EDIT_LOCK_MS - (Date.now() - finalizedTime));
+      window.editCountdownTimer = window.setInterval(updateLockedNote, 1000);
+      window.editUnlockTimer = window.setTimeout(() => {
+        if (!draft.finalizedAt || isDraftLocked()) return scheduleEditUnlock();
+        window.clearInterval(window.editCountdownTimer);
+        renderChecklist();
+        renderRegistries();
+        updateLockedNote();
+        showNotice("Os cinco minutos de bloqueio terminaram. O checklist agora pode ser editado.");
+      }, delay + 50);
     }
 
     async function compressPhoto(file) {
@@ -452,7 +659,7 @@
       const empty = document.getElementById("empty-checklist");
       const container = document.getElementById("inspection-groups");
       const sections = allSections();
-      const locked = Boolean(draft.finalizedAt);
+      const locked = isDraftLocked();
       const incompleteIndex = firstIncompleteSection(sections);
       const activeIndex = reviewSectionIndex !== null && reviewSectionIndex < sections.length
         ? reviewSectionIndex
@@ -461,7 +668,7 @@
 
       content.hidden = !sections.length;
       empty.hidden = Boolean(sections.length);
-      document.getElementById("locked-note").hidden = !locked;
+      updateLockedNote();
       document.getElementById("step-progress").hidden = !sections.length || activeIndex === null;
       document.getElementById("continue-checklist").hidden = reviewSectionIndex === null;
       document.getElementById("all-steps-done").hidden = !sections.length || incompleteIndex !== -1 || reviewSectionIndex !== null;
@@ -492,6 +699,12 @@
         group.className = `group${showItems ? " is-current" : " is-completed"}`;
         const title = document.createElement("div");
         title.className = "group-title";
+        const titleMain = document.createElement("div");
+        titleMain.className = "group-title-main";
+        const illustration = document.createElement("span");
+        illustration.className = `section-illustration section-illustration-${section.illustration || "documents"}`;
+        illustration.setAttribute("aria-hidden", "true");
+        illustration.innerHTML = SECTION_ILLUSTRATIONS[section.illustration] || SECTION_ILLUSTRATIONS.documents;
         const titleCopy = document.createElement("div");
         titleCopy.className = "group-title-copy";
         const stepLabel = document.createElement("span");
@@ -499,7 +712,11 @@
         stepLabel.textContent = `Etapa ${index + 1} de ${sections.length}${sectionComplete ? " · Concluída" : ""}`;
         const heading = document.createElement("span");
         heading.textContent = section.title;
-        titleCopy.append(stepLabel, heading);
+        const guidance = document.createElement("span");
+        guidance.className = "group-guidance";
+        guidance.textContent = section.guidance || "Revise os itens desta etapa e registre qualquer condição fora do esperado.";
+        titleCopy.append(stepLabel, heading, guidance);
+        titleMain.append(illustration, titleCopy);
         const count = document.createElement("span");
         count.className = "group-count";
         count.textContent = `${answeredCount}/${section.items.length} respondidos`;
@@ -518,7 +735,7 @@
           });
           titleActions.append(reviewButton);
         }
-        title.append(titleCopy, titleActions);
+        title.append(titleMain, titleActions);
         group.append(title);
 
         if (!showItems) {
@@ -734,12 +951,47 @@
       document.getElementById("finish-checklist").disabled = !total || unresolvedItems || Boolean(draft.finalizedAt);
       document.getElementById("finish-checklist").textContent = draft.finalizedAt ? "Inspeção finalizada" : "Finalizar inspeção";
       document.querySelectorAll("#vehicle-type, #operator, [data-vehicle-field]").forEach((input) => {
-        input.disabled = Boolean(draft.finalizedAt);
+        input.disabled = isDraftLocked();
       });
-      document.getElementById("general-comment").disabled = Boolean(draft.finalizedAt);
+      document.getElementById("general-comment").disabled = isDraftLocked();
+    }
+
+    function openHistoryRecordForEditing(record) {
+      const finalizedTime = Date.parse(record.finalizedAt);
+      if (!Number.isFinite(finalizedTime) || Date.now() - finalizedTime < EDIT_LOCK_MS) {
+        showNotice("Este checklist ainda está dentro do período de bloqueio de cinco minutos.");
+        return;
+      }
+      const hasCurrentDraft = !draft.finalizedAt && (draft.vehicle.type || draft.operator.trim() || Object.keys(draft.answers).length);
+      if (draft.id !== record.id && hasCurrentDraft && !window.confirm("Abrir este registro substituirá o rascunho atual. Deseja continuar?")) return;
+      const latestRecord = history.find((item) => item.id === record.id);
+      if (!latestRecord) return;
+      draft = JSON.parse(JSON.stringify(latestRecord));
+      reviewSectionIndex = null;
+      saveDraft();
+      updateInputsFromDraft();
+      historyDialog.close();
+      showNotice("Checklist aberto para edição. As alterações serão salvas no próprio registro do histórico.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function deleteHistoryRecord(record) {
+      if (!window.confirm("Excluir este checklist finalizado do histórico? Esta ação não pode ser desfeita.")) return;
+      const nextHistory = history.filter((item) => item.id !== record.id);
+      if (!save(HISTORY_KEY, nextHistory)) return;
+      history = nextHistory;
+      if (draft.id === record.id) {
+        draft = createDraft();
+        reviewSectionIndex = null;
+        saveDraft();
+        updateInputsFromDraft();
+      }
+      renderHistory();
+      showNotice("Checklist excluído.");
     }
 
     function renderHistory() {
+      if (window.historyUnlockTimer) window.clearTimeout(window.historyUnlockTimer);
       const container = document.getElementById("history-list");
       container.replaceChildren();
       document.getElementById("history-count").textContent = String(history.length);
@@ -787,13 +1039,32 @@
         const title = document.createElement("strong");
         title.textContent = `${vehicleName(record.vehicle)} · ${record.id || "Inspeção"}`;
         const subtitle = document.createElement("span");
-        subtitle.textContent = `${record.operator || "Operador não informado"} · ${formatDate(record.openedAt)}`;
+        subtitle.textContent = `${record.operator || "Operador não informado"} · ${formatDate(record.openedAt)}${record.editedAt ? ` · Editado em ${formatDate(record.editedAt)}` : ""}`;
         titleWrap.append(title, subtitle);
         const badge = document.createElement("span");
         badge.className = `pill${aptitude === "fit" ? " pill-good" : aptitude === "unfit" ? " pill-bad" : " pill-warn"}`;
         badge.textContent = aptitudeLabel;
         summary.append(titleWrap, badge);
         details.append(summary);
+
+        const actions = document.createElement("div");
+        actions.className = "history-record-actions";
+        const editButton = document.createElement("button");
+        editButton.type = "button";
+        editButton.className = "button history-edit-button";
+        const elapsed = Date.now() - Date.parse(record.finalizedAt);
+        const editLocked = !Number.isFinite(elapsed) || elapsed < EDIT_LOCK_MS;
+        editButton.textContent = editLocked ? "Editar após 5 min" : "Editar checklist";
+        editButton.disabled = editLocked;
+        editButton.title = editLocked ? "A edição será liberada cinco minutos após a finalização." : "Editar este checklist finalizado";
+        editButton.addEventListener("click", () => openHistoryRecordForEditing(record));
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "button button-delete";
+        deleteButton.textContent = "Excluir";
+        deleteButton.addEventListener("click", () => deleteHistoryRecord(record));
+        actions.append(editButton, deleteButton);
+        details.append(actions);
 
         const content = document.createElement("div");
         content.className = "history-record-content";
@@ -804,6 +1075,7 @@
           ["Operador", record.operator || "—"],
           ["Iniciado", formatDate(record.openedAt)],
           ["Finalizado", formatDate(record.finalizedAt)],
+          ...(record.editedAt ? [["Última edição", formatDate(record.editedAt)]] : []),
           ["Placa / registro", record.vehicle?.plate || "—"],
           ["Frota / patrimônio", record.vehicle?.fleetNumber || "—"],
           ["Série / chassi", record.vehicle?.serialNumber || "—"],
@@ -866,6 +1138,15 @@
         details.append(content);
         dialogContainer.append(details);
       });
+      const remainingTimes = history.map((record) => {
+        const elapsed = Date.now() - Date.parse(record.finalizedAt);
+        return Number.isFinite(elapsed) ? EDIT_LOCK_MS - elapsed : Infinity;
+      }).filter((remaining) => remaining > 0);
+      if (remainingTimes.length) {
+        window.historyUnlockTimer = window.setTimeout(() => {
+          if (historyDialog.open) renderHistory();
+        }, Math.min(...remainingTimes) + 50);
+      }
     }
 
     function updateInputsFromDraft() {
@@ -889,9 +1170,14 @@
     }
 
     document.getElementById("saved-vehicle").addEventListener("change", (event) => {
-      if (draft.finalizedAt) return;
+      if (isDraftLocked()) return;
       const selectedId = event.target.value;
       if (selectedId === "__new__") {
+        if (currentRole !== "manager") {
+          event.target.value = "";
+          showNotice("Somente usuários de gerência podem cadastrar veículos. Solicite o cadastro à gerência.");
+          return;
+        }
         if (!confirmVehicleChange()) {
           const currentVehicle = findSavedVehicle(draft.vehicle);
           event.target.value = currentVehicle?.id || "";
@@ -905,7 +1191,7 @@
         renderChecklist();
         event.target.value = "__new__";
         document.getElementById("vehicle-type").focus();
-        showNotice("Preencha os dados do novo veículo e selecione “Salvar veículo” para cadastrá-lo.");
+        showNotice("Para incluir este veículo no cadastro, abra “Gerenciar cadastro” ou use “Gerenciar veículos” no topo.");
         return;
       }
 
@@ -929,7 +1215,7 @@
     });
 
     document.getElementById("saved-operator").addEventListener("change", (event) => {
-      if (draft.finalizedAt) return;
+      if (isDraftLocked()) return;
       if (event.target.value === "__new__") {
         draft.operator = "";
         document.getElementById("operator").value = "";
@@ -947,39 +1233,15 @@
     });
 
     document.getElementById("save-vehicle").addEventListener("click", () => {
-      if (draft.finalizedAt) return;
-      if (!draft.vehicle.type) {
-        showNotice("Selecione o tipo do veículo antes de salvá-lo no cadastro.");
-        document.getElementById("vehicle-type").focus();
+      if (currentRole !== "manager") {
+        showNotice("Somente usuários de gerência podem alterar o cadastro de veículos.");
         return;
       }
-      if (!vehicleIdentity(draft.vehicle)) {
-        showNotice("Informe a placa, o número de frota/patrimônio ou o número de série para identificar o veículo.");
-        document.getElementById("plate").focus();
-        return;
-      }
-      const existing = findSavedVehicle(draft.vehicle);
-      const savedVehicle = {
-        id: existing?.id || newId(),
-        type: draft.vehicle.type,
-        details: Object.fromEntries(
-          Object.keys(draft.vehicle)
-            .filter((key) => key !== "type")
-            .map((key) => [key, draft.vehicle[key] || ""])
-        )
-      };
-      const nextVehicles = existing
-        ? vehicles.map((vehicle) => vehicle.id === existing.id ? savedVehicle : vehicle)
-        : [...vehicles, savedVehicle];
-      if (!saveRegistry(VEHICLES_KEY, nextVehicles)) return;
-      vehicles = nextVehicles;
-      renderRegistries();
-      document.getElementById("saved-vehicle").value = savedVehicle.id;
-      showNotice(existing ? "Cadastro do veículo atualizado." : "Veículo cadastrado para as próximas inspeções.");
+      openVehicleManagement();
     });
 
     document.getElementById("save-operator").addEventListener("click", () => {
-      if (draft.finalizedAt) return;
+      if (isDraftLocked()) return;
       const name = draft.operator.trim();
       if (!name) {
         showNotice("Informe o nome do operador antes de salvá-lo no cadastro.");
@@ -999,7 +1261,7 @@
     });
 
     document.getElementById("vehicle-type").addEventListener("change", (event) => {
-      if (draft.finalizedAt) return;
+      if (isDraftLocked()) return;
       const previousType = draft.vehicle.type;
       draft.vehicle.type = event.target.value;
       if (previousType && previousType !== draft.vehicle.type) {
@@ -1013,23 +1275,26 @@
       document.getElementById("reading").placeholder = draft.vehicle.type === "machine" ? "Horas de operação" : "Leitura atual";
       saveDraft();
       renderChecklist();
+      renderRegistries();
       document.getElementById("saved-vehicle").value = findSavedVehicle(draft.vehicle)?.id || (vehicleIdentity(draft.vehicle) ? "__new__" : "");
     });
 
     document.getElementById("operator").addEventListener("input", (event) => {
+      if (isDraftLocked()) return;
       draft.operator = event.target.value;
       saveDraft();
       document.getElementById("saved-operator").value = operators.find((operator) => normalize(operator.name) === normalize(draft.operator))?.id || (draft.operator.trim() ? "__new__" : "");
     });
 
     document.getElementById("general-comment").addEventListener("input", (event) => {
+      if (isDraftLocked()) return;
       draft.comment = event.target.value;
       saveDraft();
     });
 
     document.querySelectorAll("[data-vehicle-field]").forEach((input) => {
       input.addEventListener("input", () => {
-        if (draft.finalizedAt) return;
+        if (isDraftLocked()) return;
         draft.vehicle[input.dataset.vehicleField] = input.value;
         saveDraft();
         const savedVehicle = findSavedVehicle(draft.vehicle);
@@ -1071,6 +1336,7 @@
       renderHistory();
       renderChecklist();
       renderRegistries();
+      scheduleEditUnlock();
       if (historySaved && draftSaved) {
         notice.textContent = "Inspeção finalizada e registrada neste navegador. Use “Imprimir relatório” para guardar uma cópia.";
         notice.hidden = false;
@@ -1083,10 +1349,17 @@
       draft = createDraft();
       reviewSectionIndex = null;
       saveDraft();
+      scheduleEditUnlock();
       notice.hidden = true;
       document.getElementById("saved-vehicle").value = "";
       document.getElementById("saved-operator").value = "";
       updateInputsFromDraft();
+    });
+
+    document.getElementById("delete-current-checklist").addEventListener("click", () => {
+      const record = history.find((item) => item.id === draft.id) || draft;
+      deleteHistoryRecord(record);
+      scheduleEditUnlock();
     });
 
     document.getElementById("print-report").addEventListener("click", () => window.print());
@@ -1102,6 +1375,26 @@
       historyDialog.showModal();
     });
     document.getElementById("close-history").addEventListener("click", () => historyDialog.close());
+
+    const vehicleManagementDialog = document.getElementById("vehicle-management-dialog");
+    function openVehicleManagement() {
+      if (currentRole !== "manager") {
+        showNotice("A gestão de veículos está disponível somente para usuários de gerência.");
+        return;
+      }
+      renderManagedVehicles();
+      managedVehicleForm.hidden = true;
+      vehicleManagementDialog.showModal();
+    }
+    document.getElementById("manage-vehicles-button").addEventListener("click", openVehicleManagement);
+    document.getElementById("close-vehicle-management").addEventListener("click", () => vehicleManagementDialog.close());
+    document.getElementById("new-managed-vehicle").addEventListener("click", () => showManagedVehicleForm());
+    document.getElementById("cancel-managed-vehicle").addEventListener("click", () => {
+      managedVehicleForm.reset();
+      managedVehicleForm.hidden = true;
+      editingVehicleId = null;
+    });
+    managedVehicleForm.addEventListener("submit", saveManagedVehicle);
 
     async function passwordHash(password) {
       if (!crypto.subtle) {
@@ -1123,6 +1416,20 @@
       return (await passwordHash(password)) === savedHash;
     }
 
+    function storedUsername() {
+      try { return localStorage.getItem(USER_KEY) || ""; }
+      catch (error) { return ""; }
+    }
+
+    function storedRole() {
+      try {
+        const role = localStorage.getItem(USER_ROLE_KEY);
+        return role === "collaborator" ? "collaborator" : "manager";
+      } catch (error) {
+        return "manager";
+      }
+    }
+
     document.getElementById("login-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const username = document.getElementById("login-user").value.trim();
@@ -1132,6 +1439,13 @@
       if (!username) {
         errorElement.textContent = "Informe seu nome de usuário.";
         errorElement.hidden = false;
+        return;
+      }
+      const registeredUsername = storedUsername();
+      if (registeredUsername && normalize(username) !== normalize(registeredUsername)) {
+        errorElement.textContent = "Usuário não cadastrado neste navegador.";
+        errorElement.hidden = false;
+        document.getElementById("login-user").focus();
         return;
       }
       try {
@@ -1148,8 +1462,12 @@
       }
 
       document.getElementById("logged-user").textContent = username;
+      currentRole = storedRole();
+      document.getElementById("logged-role").textContent = currentRole === "manager" ? "Gerência" : "Colaborador";
+      document.getElementById("manage-vehicles-button").hidden = currentRole !== "manager";
       document.getElementById("login-screen").hidden = true;
       document.getElementById("app-shell").hidden = false;
+      renderRegistries();
       document.getElementById("login-password").value = "";
       if (!draft.finalizedAt && !draft.operator.trim()) {
         draft.operator = username;
@@ -1168,10 +1486,68 @@
     });
 
     const passwordDialog = document.getElementById("password-dialog");
-    document.getElementById("change-password-button").addEventListener("click", () => {
+    function openPasswordDialog() {
       document.getElementById("password-error").hidden = true;
+      document.getElementById("password-description").textContent = "A senha atual é necessária para confirmar a alteração.";
+      document.getElementById("current-password").value = "";
       passwordDialog.showModal();
       document.getElementById("current-password").focus();
+    }
+    document.getElementById("change-password-button").addEventListener("click", openPasswordDialog);
+    document.getElementById("login-change-password").addEventListener("click", openPasswordDialog);
+
+    const registrationDialog = document.getElementById("registration-dialog");
+    document.getElementById("first-access-button").addEventListener("click", () => {
+      const errorElement = document.getElementById("registration-error");
+      errorElement.hidden = true;
+      if (storedUsername()) {
+        const loginError = document.getElementById("login-error");
+        loginError.textContent = "O primeiro acesso já foi cadastrado neste navegador. Use a opção Alterar senha.";
+        loginError.hidden = false;
+        return;
+      }
+      registrationDialog.showModal();
+      document.getElementById("registration-user").focus();
+    });
+    document.getElementById("cancel-registration").addEventListener("click", () => registrationDialog.close());
+    document.getElementById("registration-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const username = document.getElementById("registration-user").value.trim();
+      const role = document.getElementById("registration-role").value;
+      const password = document.getElementById("registration-password").value;
+      const confirmation = document.getElementById("registration-confirm").value;
+      const errorElement = document.getElementById("registration-error");
+      errorElement.hidden = true;
+      if (!role) {
+        errorElement.textContent = "Selecione Gerência ou Colaborador para definir o perfil de acesso.";
+        errorElement.hidden = false;
+        return;
+      }
+      if (password.length < 6) {
+        errorElement.textContent = "A senha precisa ter pelo menos 6 caracteres.";
+        errorElement.hidden = false;
+        return;
+      }
+      if (password !== confirmation) {
+        errorElement.textContent = "A confirmação não corresponde à senha.";
+        errorElement.hidden = false;
+        return;
+      }
+      try {
+        localStorage.setItem(AUTH_KEY, await passwordHash(password));
+        localStorage.setItem(USER_KEY, username);
+        localStorage.setItem(USER_ROLE_KEY, role);
+        document.getElementById("login-user").value = username;
+        document.getElementById("login-password").value = "";
+        document.getElementById("registration-form").reset();
+        registrationDialog.close();
+        document.getElementById("login-password").focus();
+        document.getElementById("login-error").textContent = "Cadastro concluído. Entre com sua senha.";
+        document.getElementById("login-error").hidden = false;
+      } catch (error) {
+        errorElement.textContent = `Não foi possível concluir o cadastro: ${error.message}`;
+        errorElement.hidden = false;
+      }
     });
     document.getElementById("cancel-password").addEventListener("click", () => passwordDialog.close());
     document.getElementById("change-password-form").addEventListener("submit", async (event) => {
@@ -1200,8 +1576,9 @@
         localStorage.setItem(AUTH_KEY, await passwordHash(next));
         document.getElementById("change-password-form").reset();
         passwordDialog.close();
-        document.querySelector(".login-hint").textContent = "A senha inicial foi alterada neste navegador.";
-        showNotice("Senha alterada. Use a nova senha no próximo acesso.");
+        document.getElementById("login-error").textContent = "Senha alterada com sucesso. Use a nova senha no próximo acesso.";
+        document.getElementById("login-error").hidden = false;
+        if (!document.getElementById("app-shell").hidden) showNotice("Senha alterada com sucesso.");
       } catch (error) {
         errorElement.textContent = `Não foi possível alterar a senha: ${error.message}`;
         errorElement.hidden = false;
@@ -1212,3 +1589,4 @@
     renderChecklist();
     renderHistory();
     renderRegistries();
+    scheduleEditUnlock();

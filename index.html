@@ -11,6 +11,9 @@
 <body>
   <section class="login-screen" id="login-screen" aria-labelledby="login-heading">
     <form class="login-card" id="login-form">
+      <div class="login-illustration" aria-hidden="true">
+        <svg viewBox="0 0 280 150" role="img" focusable="false"><rect x="66" y="13" width="148" height="124" rx="18" fill="#fff"/><path d="M91 48h96M91 72h96M91 96h58" stroke="#dbe5ef" stroke-width="8" stroke-linecap="round"/><circle cx="77" cy="48" r="11" fill="#e8f7ef"/><path d="m72 48 4 4 7-8" fill="none" stroke="#16805a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="77" cy="72" r="11" fill="#e8f7ef"/><path d="m72 72 4 4 7-8" fill="none" stroke="#16805a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M184 110h41l13 14h-68z" fill="#73a7ee"/><circle cx="181" cy="127" r="8" fill="#29486a"/><circle cx="222" cy="127" r="8" fill="#29486a"/><path d="M204 110V93h22l12 17" fill="#9bc0f5"/><path d="M222 97h-12v13h23" fill="none" stroke="#fff" stroke-width="3"/></svg>
+      </div>
       <div class="brand login-brand"><span class="brand-mark" aria-hidden="true">✓</span><span>INSPEÇÃO DE FROTA</span></div>
       <p class="eyebrow">Acesso ao sistema</p>
       <h1 id="login-heading">Entre para continuar</h1>
@@ -24,7 +27,7 @@
         <input id="login-password" name="password" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Digite a senha" required>
       </div>
       <button class="button button-primary login-submit" type="submit">Entrar</button>
-      <p class="login-hint">Senha inicial: <strong>123456</strong>. Se já foi alterada neste navegador, use a nova senha.</p>
+      <div class="login-actions"><button class="login-link" id="first-access-button" type="button">Cadastro para primeiro acesso</button><button class="login-link" id="login-change-password" type="button">Alterar senha</button></div>
       <p class="login-error" id="login-error" role="alert" hidden></p>
     </form>
   </section>
@@ -35,6 +38,8 @@
       <div class="brand"><span class="brand-mark" aria-hidden="true">✓</span><span>INSPEÇÃO DE FROTA</span></div>
       <div class="user-actions">
         <span class="topbar-note">Acesso: <strong id="logged-user"></strong></span>
+        <span class="role-badge" id="logged-role"></span>
+        <button class="topbar-action" id="manage-vehicles-button" type="button" hidden>Gerenciar veículos</button>
         <button class="topbar-action" id="change-password-button" type="button">Alterar senha</button>
         <button class="topbar-action" id="logout-button" type="button">Sair</button>
       </div>
@@ -50,7 +55,7 @@
       </div>
       <div class="header-actions">
         <button class="button button-print" id="print-report" type="button">Imprimir relatório</button>
-        <button class="button" id="history-button" type="button">Histórico <span class="history-count" id="history-count">0</span></button>
+        <button class="button button-history" id="history-button" type="button">Histórico <span class="history-count" id="history-count">0</span></button>
         <button class="button button-primary" id="new-checklist" type="button">+ Novo checklist</button>
       </div>
     </header>
@@ -68,6 +73,15 @@
             <span class="section-number" aria-hidden="true">01</span>
           </div>
           <div class="identity-grid">
+            <div class="field span-2">
+              <label for="vehicle-type">Tipo de veículo ou equipamento <span aria-hidden="true">*</span></label>
+              <select id="vehicle-type" data-field="type">
+                <option value="">Selecione o tipo</option>
+                <option value="car">Carro / utilitário</option>
+                <option value="truck">Caminhão / ônibus</option>
+                <option value="machine">Máquina / equipamento</option>
+              </select>
+            </div>
             <div class="registry-row span-3">
               <div class="registry-control field">
                 <label for="saved-vehicle">Veículo já cadastrado</label>
@@ -76,7 +90,7 @@
                     <option value="">Selecione um veículo salvo ou cadastre um novo</option>
                     <option value="__new__">+ Cadastrar novo veículo</option>
                   </select>
-                  <button class="button registry-button" id="save-vehicle" type="button">Salvar veículo</button>
+                  <button class="button registry-button" id="save-vehicle" type="button">Gerenciar cadastro</button>
                 </div>
                 <span class="field-hint">Ao selecionar, os dados do veículo são preenchidos automaticamente.</span>
               </div>
@@ -91,15 +105,6 @@
                 </div>
                 <span class="field-hint">Escolha um nome salvo ou digite um novo operador abaixo.</span>
               </div>
-            </div>
-            <div class="field span-2">
-              <label for="vehicle-type">Tipo de veículo ou equipamento <span aria-hidden="true">*</span></label>
-              <select id="vehicle-type" data-field="type">
-                <option value="">Selecione o tipo</option>
-                <option value="car">Carro / utilitário</option>
-                <option value="truck">Caminhão / ônibus</option>
-                <option value="machine">Máquina / equipamento</option>
-              </select>
             </div>
             <div class="field">
               <label for="checklist-id">ID da inspeção</label>
@@ -152,7 +157,19 @@
             </div>
             <span class="section-number" aria-hidden="true">02</span>
           </div>
-          <div id="empty-checklist" class="empty-checklist">Selecione o tipo de veículo ou equipamento para carregar os itens de inspeção correspondentes.</div>
+          <div id="empty-checklist" class="empty-checklist">
+            <div class="guide-intro">
+              <span class="guide-art" aria-hidden="true"><svg viewBox="0 0 96 96"><rect x="16" y="10" width="53" height="68" rx="10" fill="#fff" stroke="#cbdaf0" stroke-width="3"/><path d="M31 30h26M31 43h26M31 56h13" stroke="#d5e0ed" stroke-width="5" stroke-linecap="round"/><circle cx="27" cy="30" r="5" fill="#dff3e8"/><path d="m25 30 2 2 4-5" fill="none" stroke="#16805a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="68" cy="65" r="16" fill="#eaf2ff" stroke="#77a4e7" stroke-width="3"/><path d="m80 77 9 9" stroke="#477cc9" stroke-width="5" stroke-linecap="round"/><path d="M63 65h10M68 60v10" stroke="#477cc9" stroke-width="2" stroke-linecap="round"/></svg></span>
+              <div><strong>Prepare sua inspeção em três passos</strong><p>Comece pela identificação para carregar o checklist certo para a operação.</p></div>
+            </div>
+            <div class="workflow-guide" aria-label="Etapas para iniciar a inspeção">
+              <div class="guide-step"><span class="guide-number">1</span><span class="guide-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h11v10H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg></span><strong>Identifique</strong><span>Escolha o tipo e o veículo.</span></div>
+              <div class="guide-connector" aria-hidden="true"></div>
+              <div class="guide-step"><span class="guide-number">2</span><span class="guide-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h12v17H6zM9 9l2 2 4-4M9 16h6"/></svg></span><strong>Inspecione</strong><span>Marque cada item verificado.</span></div>
+              <div class="guide-connector" aria-hidden="true"></div>
+              <div class="guide-step"><span class="guide-number">3</span><span class="guide-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5zM14 4v5h5M8 13h8M8 16h6"/></svg></span><strong>Registre</strong><span>Descreva falhas e evidências.</span></div>
+            </div>
+          </div>
           <div id="checklist-content" hidden>
             <div class="status-legend" aria-label="Legenda das situações">
               <span class="legend-label">Situação:</span>
@@ -185,7 +202,7 @@
               <textarea id="general-comment" maxlength="2000" placeholder="Adicione um comentário sobre a inspeção..."></textarea>
             </section>
           </div>
-          <p class="locked-note" id="locked-note" hidden>Este checklist foi finalizado e está bloqueado para edição. Imprima o relatório ou inicie um novo checklist.</p>
+          <div class="locked-note" id="locked-note" hidden><span id="locked-note-text"></span><button class="button button-delete" id="delete-current-checklist" type="button">Excluir checklist</button></div>
         </section>
 
         <section class="panel actions-panel" aria-label="Ações do checklist">
@@ -222,7 +239,7 @@
   <dialog class="password-dialog" id="password-dialog" aria-labelledby="password-heading">
     <form id="change-password-form">
       <h2 id="password-heading">Alterar senha de acesso</h2>
-      <p>A senha atual é necessária para confirmar a alteração.</p>
+      <p id="password-description">A senha atual é necessária para confirmar a alteração.</p>
       <div class="field">
         <label for="current-password">Senha atual</label>
         <input id="current-password" type="password" autocomplete="current-password" required>
@@ -242,6 +259,46 @@
         <button class="button button-primary" type="submit">Salvar nova senha</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog class="password-dialog" id="registration-dialog" aria-labelledby="registration-heading">
+    <form id="registration-form">
+      <h2 id="registration-heading">Cadastro do primeiro acesso</h2>
+      <p>Crie seu usuário e uma senha para este navegador.</p>
+      <div class="field"><label for="registration-user">Usuário</label><input id="registration-user" maxlength="100" autocomplete="username" required></div>
+      <div class="field"><label for="registration-role">Perfil de acesso</label><select id="registration-role" required><option value="">Selecione o perfil</option><option value="manager">Gerência</option><option value="collaborator">Colaborador</option></select><span class="field-hint">Gerência administra os veículos cadastrados. Colaborador realiza inspeções.</span></div>
+      <div class="field"><label for="registration-password">Senha</label><input id="registration-password" type="password" minlength="6" autocomplete="new-password" required><span class="field-hint">Use pelo menos 6 caracteres.</span></div>
+      <div class="field"><label for="registration-confirm">Confirme a senha</label><input id="registration-confirm" type="password" minlength="6" autocomplete="new-password" required></div>
+      <p class="login-error" id="registration-error" role="alert" hidden></p>
+      <div class="dialog-actions"><button class="button" id="cancel-registration" type="button">Cancelar</button><button class="button button-primary" type="submit">Cadastrar</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="history-dialog vehicle-management-dialog" id="vehicle-management-dialog" aria-labelledby="vehicle-management-heading">
+    <div class="history-dialog-header">
+      <div><p class="eyebrow">Acesso de gerência</p><h2 id="vehicle-management-heading">Gerenciar veículos</h2></div>
+      <button class="dialog-close" id="close-vehicle-management" type="button" aria-label="Fechar gestão de veículos">×</button>
+    </div>
+    <div class="vehicle-management-content">
+      <div class="vehicle-management-toolbar"><p>Cadastre, edite ou altere a disponibilidade dos veículos para inspeção.</p><button class="button button-primary" id="new-managed-vehicle" type="button">+ Novo veículo</button></div>
+      <div class="managed-vehicle-list" id="managed-vehicle-list"></div>
+      <form class="managed-vehicle-form" id="managed-vehicle-form" hidden>
+        <h3 id="managed-vehicle-form-heading">Novo veículo</h3>
+        <div class="identity-grid management-grid">
+          <div class="field"><label for="managed-type">Tipo <span aria-hidden="true">*</span></label><select id="managed-type" required><option value="">Selecione o tipo</option><option value="car">Carro / utilitário</option><option value="truck">Caminhão / ônibus</option><option value="machine">Máquina / equipamento</option></select></div>
+          <div class="field"><label for="managed-plate">Placa / registro</label><input id="managed-plate" maxlength="20"></div>
+          <div class="field"><label for="managed-fleet">Frota / patrimônio</label><input id="managed-fleet" maxlength="40"></div>
+          <div class="field"><label for="managed-serial">Série / chassi</label><input id="managed-serial" maxlength="60"></div>
+          <div class="field"><label for="managed-make-model">Marca e modelo</label><input id="managed-make-model" maxlength="100"></div>
+          <div class="field"><label for="managed-color">Cor</label><input id="managed-color" maxlength="40"></div>
+          <div class="field"><label for="managed-reading">Quilometragem / horímetro</label><input id="managed-reading" maxlength="30"></div>
+          <div class="field"><label for="managed-location">Local</label><input id="managed-location" maxlength="100"></div>
+        </div>
+        <p class="field-hint">Informe pelo menos placa, frota/patrimônio ou número de série/chassi.</p>
+        <p class="login-error" id="managed-vehicle-error" role="alert" hidden></p>
+        <div class="dialog-actions"><button class="button" id="cancel-managed-vehicle" type="button">Cancelar</button><button class="button button-primary" type="submit">Salvar veículo</button></div>
+      </form>
+    </div>
   </dialog>
 
   <dialog class="history-dialog" id="history-dialog" aria-labelledby="history-heading">

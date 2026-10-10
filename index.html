@@ -314,8 +314,11 @@
     <div class="history-report-controls">
       <div class="history-filter-grid">
         <div class="field"><label for="history-filter-vehicle">Veículo</label><select id="history-filter-vehicle"><option value="">Todos os veículos</option></select></div>
+        <div class="field"><label for="history-filter-category">Categoria do checklist</label><select id="history-filter-category"><option value="">Todas as categorias</option></select></div>
         <div class="field"><label for="history-filter-item">Item da inspeção</label><select id="history-filter-item"><option value="">Todos os itens</option></select></div>
         <div class="field"><label for="history-filter-status">Resultado do item</label><select id="history-filter-status"><option value="">Todos</option><option value="ok">Conforme</option><option value="fail">Não conforme</option><option value="na">N/A</option></select></div>
+        <div class="field"><label for="history-filter-start">Data e hora inicial</label><input id="history-filter-start" type="datetime-local"></div>
+        <div class="field"><label for="history-filter-end">Data e hora final</label><input id="history-filter-end" type="datetime-local"></div>
       </div>
       <div class="history-report-actions">
         <p id="history-filter-summary" aria-live="polite">0 inspeções no relatório</p>

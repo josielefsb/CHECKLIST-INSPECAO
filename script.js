@@ -1053,11 +1053,9 @@
 
     function populateHistoryFilters() {
       const vehicleSelect = document.getElementById("history-filter-vehicle");
-      const categorySelect = document.getElementById("history-filter-category");
       const itemSelect = document.getElementById("history-filter-item");
       const vehicleValue = vehicleSelect.value;
-      const categoryValue = categorySelect.value;
-      const itemValue = itemSelect.value;
+      const groupValue = itemSelect.value;
       const statusValue = document.getElementById("history-filter-status").value;
       const startValue = document.getElementById("history-filter-start").value;
       const endValue = document.getElementById("history-filter-end").value;
@@ -1067,34 +1065,17 @@
       [...vehicleOptions.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).forEach(([value, label]) => vehicleSelect.add(new Option(label, value)));
       vehicleSelect.value = vehicleOptions.has(vehicleValue) ? vehicleValue : "";
 
-      const itemGroups = new Map();
+      const inspectionGroups = new Map();
       ["car", "truck", "machine"].forEach((type) => {
         sectionsForType(type).forEach((section) => {
-          if (!itemGroups.has(section.title)) itemGroups.set(section.title, new Map());
-          section.items.forEach(([id, label]) => itemGroups.get(section.title).set(id, label));
+          if (!inspectionGroups.has(section.title)) inspectionGroups.set(section.title, true);
         });
       });
-      categorySelect.replaceChildren(new Option("Todas as categorias", ""));
-      [...itemGroups.keys()].sort((a, b) => a.localeCompare(b, "pt-BR")).forEach((category) => categorySelect.add(new Option(category, category)));
-      categorySelect.value = itemGroups.has(categoryValue) ? categoryValue : "";
-      itemSelect.replaceChildren(new Option("Todos os itens", ""));
-      const availableGroups = categorySelect.value
-        ? [[categorySelect.value, itemGroups.get(categorySelect.value)]]
-        : [...itemGroups.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
-      availableGroups.forEach(([category, items]) => {
-        if (!categorySelect.value) {
-          const group = document.createElement("optgroup");
-          group.label = category;
-          [...items.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).forEach(([value, label]) => group.append(new Option(label, value)));
-          itemSelect.append(group);
-        } else {
-          [...items.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).forEach(([value, label]) => itemSelect.add(new Option(label, value)));
-        }
-      });
-      const validItems = availableGroups.flatMap(([, items]) => [...items.keys()]);
-      itemSelect.value = validItems.includes(itemValue) ? itemValue : "";
+      itemSelect.replaceChildren(new Option("Todos os grupos", ""));
+      [...inspectionGroups.keys()].sort((a, b) => a.localeCompare(b, "pt-BR")).forEach((title) => itemSelect.add(new Option(title, title)));
+      itemSelect.value = inspectionGroups.has(groupValue) ? groupValue : "";
       document.getElementById("history-filter-status").value = statusValue;
-      return { vehicle: vehicleSelect.value, category: categorySelect.value, item: itemSelect.value, status: statusValue, start: startValue, end: endValue };
+      return { vehicle: vehicleSelect.value, item: itemSelect.value, status: statusValue, start: startValue, end: endValue };
     }
 
     function recordMatchesHistoryFilters(record, filters) {
@@ -1103,8 +1084,12 @@
       if (filters.start && inspectionTime < new Date(filters.start).getTime()) return false;
       if (filters.end && inspectionTime > new Date(filters.end).getTime()) return false;
       if (filters.item) {
-        const answer = record.answers?.[filters.item];
-        if (!answer?.status || (filters.status && answer.status !== filters.status)) return false;
+        const section = sectionsForType(record.vehicle?.type).find((candidate) => candidate.title === filters.item);
+        if (!section) return false;
+        const answersInGroup = section.items.map(([id]) => record.answers?.[id]);
+        if (filters.status
+          ? !answersInGroup.some((answer) => answer?.status === filters.status)
+          : !answersInGroup.some((answer) => answer?.status)) return false;
       } else if (filters.status && !Object.values(record.answers || {}).some((answer) => answer.status === filters.status)) {
         return false;
       }
@@ -1219,13 +1204,13 @@
         });
         content.append(metadata);
 
-        sectionsForType(record.vehicle?.type).forEach((section) => {
+        sectionsForType(record.vehicle?.type).filter((section) => !filters.item || section.title === filters.item).forEach((section) => {
           const answerGroup = document.createElement("section");
           answerGroup.className = "history-answer-group";
           const heading = document.createElement("h3");
           heading.textContent = section.title;
           answerGroup.append(heading);
-          section.items.filter(([id]) => !filters.item || id === filters.item).forEach(([id, label]) => {
+          section.items.forEach(([id, label]) => {
             const answer = record.answers?.[id] || {};
             const item = document.createElement("div");
             item.className = "history-answer";
@@ -1519,12 +1504,11 @@
       historyDialog.showModal();
     });
     document.getElementById("close-history").addEventListener("click", () => historyDialog.close());
-    ["history-filter-vehicle", "history-filter-category", "history-filter-item", "history-filter-status", "history-filter-start", "history-filter-end"].forEach((id) => {
+    ["history-filter-vehicle", "history-filter-item", "history-filter-status", "history-filter-start", "history-filter-end"].forEach((id) => {
       document.getElementById(id).addEventListener("change", renderHistory);
     });
     document.getElementById("clear-history-filters").addEventListener("click", () => {
       document.getElementById("history-filter-vehicle").value = "";
-      document.getElementById("history-filter-category").value = "";
       document.getElementById("history-filter-item").value = "";
       document.getElementById("history-filter-status").value = "";
       document.getElementById("history-filter-start").value = "";

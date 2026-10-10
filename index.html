@@ -311,6 +311,18 @@
       </div>
       <button class="dialog-close" id="close-history" type="button" aria-label="Fechar histórico">×</button>
     </div>
+    <div class="history-report-controls">
+      <div class="history-filter-grid">
+        <div class="field"><label for="history-filter-vehicle">Veículo</label><select id="history-filter-vehicle"><option value="">Todos os veículos</option></select></div>
+        <div class="field"><label for="history-filter-item">Item da inspeção</label><select id="history-filter-item"><option value="">Todos os itens</option></select></div>
+        <div class="field"><label for="history-filter-status">Resultado do item</label><select id="history-filter-status"><option value="">Todos</option><option value="ok">Conforme</option><option value="fail">Não conforme</option><option value="na">N/A</option></select></div>
+      </div>
+      <div class="history-report-actions">
+        <p id="history-filter-summary" aria-live="polite">0 inspeções no relatório</p>
+        <button class="button" id="clear-history-filters" type="button">Limpar filtros</button>
+        <button class="button button-primary" id="print-history-report" type="button">Imprimir relatório filtrado</button>
+      </div>
+    </div>
     <div class="history-dialog-list" id="history-dialog-list"></div>
   </dialog>
 </body>

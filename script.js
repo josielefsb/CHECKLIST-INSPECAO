@@ -1042,6 +1042,46 @@
       showNotice("Checklist excluído.");
     }
 
+    function historyVehicleKey(record) {
+      const vehicle = record.vehicle || {};
+      const identifier = vehicle.plate || vehicle.fleetNumber || vehicle.serialNumber || vehicle.makeModel || "Sem identificação";
+      return `${vehicle.type || "unknown"}|${normalize(identifier)}`;
+    }
+
+    function populateHistoryFilters() {
+      const vehicleSelect = document.getElementById("history-filter-vehicle");
+      const itemSelect = document.getElementById("history-filter-item");
+      const vehicleValue = vehicleSelect.value;
+      const itemValue = itemSelect.value;
+      const statusValue = document.getElementById("history-filter-status").value;
+      const vehicleOptions = new Map();
+      history.forEach((record) => vehicleOptions.set(historyVehicleKey(record), vehicleName(record.vehicle || {})));
+      vehicleSelect.replaceChildren(new Option("Todos os veículos", ""));
+      [...vehicleOptions.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).forEach(([value, label]) => vehicleSelect.add(new Option(label, value)));
+      vehicleSelect.value = vehicleOptions.has(vehicleValue) ? vehicleValue : "";
+
+      const itemOptions = new Map();
+      ["car", "truck", "machine"].forEach((type) => {
+        itemsForType(type).forEach((item) => itemOptions.set(item.id, `${item.section} — ${item.label}`));
+      });
+      itemSelect.replaceChildren(new Option("Todos os itens", ""));
+      [...itemOptions.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).forEach(([value, label]) => itemSelect.add(new Option(label, value)));
+      itemSelect.value = itemOptions.has(itemValue) ? itemValue : "";
+      document.getElementById("history-filter-status").value = statusValue;
+      return { vehicle: vehicleSelect.value, item: itemSelect.value, status: statusValue };
+    }
+
+    function recordMatchesHistoryFilters(record, filters) {
+      if (filters.vehicle && historyVehicleKey(record) !== filters.vehicle) return false;
+      if (filters.item) {
+        const answer = record.answers?.[filters.item];
+        if (!answer?.status || (filters.status && answer.status !== filters.status)) return false;
+      } else if (filters.status && !Object.values(record.answers || {}).some((answer) => answer.status === filters.status)) {
+        return false;
+      }
+      return true;
+    }
+
     function renderHistory() {
       if (window.historyUnlockTimer) window.clearTimeout(window.historyUnlockTimer);
       const container = document.getElementById("history-list");
@@ -1049,6 +1089,9 @@
       document.getElementById("history-count").textContent = String(history.length);
       const dialogContainer = document.getElementById("history-dialog-list");
       dialogContainer.replaceChildren();
+      const filters = populateHistoryFilters();
+      const filteredHistory = history.filter((record) => recordMatchesHistoryFilters(record, filters));
+      document.getElementById("history-filter-summary").textContent = `${filteredHistory.length} ${filteredHistory.length === 1 ? "inspeção" : "inspeções"} no relatório`;
       if (!history.length) {
         const empty = document.createElement("p");
         empty.className = "history-empty";
@@ -1074,7 +1117,7 @@
         container.append(entry);
       });
 
-      history.forEach((record) => {
+      filteredHistory.forEach((record) => {
         const recordItems = itemsForType(record.vehicle?.type);
         const failedCount = recordItems.filter(({ id }) => record.answers?.[id]?.status === "fail").length;
         const criticalFailure = recordItems.some(({ id, essential }) => essential && record.answers?.[id]?.status === "fail");
@@ -1153,7 +1196,7 @@
           const heading = document.createElement("h3");
           heading.textContent = section.title;
           answerGroup.append(heading);
-          section.items.forEach(([id, label]) => {
+          section.items.filter(([id]) => !filters.item || id === filters.item).forEach(([id, label]) => {
             const answer = record.answers?.[id] || {};
             const item = document.createElement("div");
             item.className = "history-answer";
@@ -1190,6 +1233,12 @@
         details.append(content);
         dialogContainer.append(details);
       });
+      if (!filteredHistory.length) {
+        const noMatches = document.createElement("p");
+        noMatches.className = "history-empty-large";
+        noMatches.textContent = "Nenhuma inspeção corresponde aos filtros selecionados.";
+        dialogContainer.append(noMatches);
+      }
       const remainingTimes = history.map((record) => {
         const elapsed = Date.now() - Date.parse(record.finalizedAt);
         return Number.isFinite(elapsed) ? EDIT_LOCK_MS - elapsed : Infinity;
@@ -1355,7 +1404,7 @@
       });
     });
 
-    document.getElementById("finish-checklist").addEventListener("click", () => {
+    document.getElementById("finish-checklist").addEventListener("click", async () => {
       const problems = [];
       if (!draft.vehicle.type) problems.push("Selecione o tipo do veículo ou equipamento.");
       if (!draft.operator.trim()) problems.push("Informe o nome do operador.");
@@ -1384,15 +1433,29 @@
       history.unshift(record);
       history = history.slice(0, 100);
       const historySaved = save(HISTORY_KEY, history);
-      const draftSaved = saveDraft();
-      renderHistory();
-      renderChecklist();
-      renderRegistries();
-      scheduleEditUnlock();
-      if (historySaved && draftSaved) {
-        notice.textContent = "Inspeção finalizada e registrada neste navegador. Use “Imprimir relatório” para guardar uma cópia.";
-        notice.hidden = false;
+      const finalizedDraftSaved = saveDraft();
+      let cloudSyncError = null;
+      if (supabaseClient && authUser) {
+        try {
+          await syncCurrentInspection();
+        } catch (error) {
+          cloudSyncError = error;
+        }
       }
+
+      draft = createDraft();
+      reviewSectionIndex = null;
+      const clearedDraftSaved = saveDraft();
+      updateInputsFromDraft();
+      renderHistory();
+      scheduleEditUnlock();
+      const locallySaved = historySaved && finalizedDraftSaved && clearedDraftSaved;
+      const completionMessage = locallySaved
+        ? "Inspeção finalizada e salva. O formulário foi limpo para iniciar o próximo checklist."
+        : "Inspeção finalizada, mas houve uma falha ao salvar localmente. Confira a conexão e o estado de salvamento.";
+      showNotice(cloudSyncError
+        ? `${completionMessage} A sincronização com o Supabase falhou: ${cloudSyncError.message}`
+        : completionMessage);
     });
 
     document.getElementById("new-checklist").addEventListener("click", () => {
@@ -1427,6 +1490,21 @@
       historyDialog.showModal();
     });
     document.getElementById("close-history").addEventListener("click", () => historyDialog.close());
+    ["history-filter-vehicle", "history-filter-item", "history-filter-status"].forEach((id) => {
+      document.getElementById(id).addEventListener("change", renderHistory);
+    });
+    document.getElementById("clear-history-filters").addEventListener("click", () => {
+      document.getElementById("history-filter-vehicle").value = "";
+      document.getElementById("history-filter-item").value = "";
+      document.getElementById("history-filter-status").value = "";
+      renderHistory();
+    });
+    document.getElementById("print-history-report").addEventListener("click", () => {
+      if (!historyDialog.open) historyDialog.showModal();
+      document.body.classList.add("history-print-mode");
+      window.print();
+    });
+    window.addEventListener("afterprint", () => document.body.classList.remove("history-print-mode"));
 
     const vehicleManagementDialog = document.getElementById("vehicle-management-dialog");
     function openVehicleManagement() {

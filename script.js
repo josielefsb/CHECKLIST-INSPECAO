@@ -1,3 +1,4 @@
+(() => {
     const commonSections = [
       {
         title: "Documentação e identificação",
@@ -1599,3 +1600,4 @@
     renderHistory();
     renderRegistries();
     scheduleEditUnlock();
+})();

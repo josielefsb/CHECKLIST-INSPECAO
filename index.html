@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#101c2d">
   <title>Inspeção de frota</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase/config.js" defer></script>
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -19,8 +21,8 @@
       <h1 id="login-heading">Entre para continuar</h1>
       <p class="login-description">Identifique-se para acessar os dados e iniciar a inspeção.</p>
       <div class="field">
-        <label for="login-user">Usuário</label>
-        <input id="login-user" name="username" autocomplete="username" maxlength="100" placeholder="Digite seu nome" required>
+        <label for="login-user">E-mail</label>
+        <input id="login-user" name="username" type="email" autocomplete="username" maxlength="254" placeholder="voce@empresa.com" required>
       </div>
       <div class="field">
         <label for="login-password">Senha</label>
@@ -265,8 +267,8 @@
     <form id="registration-form">
       <h2 id="registration-heading">Cadastro do primeiro acesso</h2>
       <p>Crie seu usuário e uma senha para este navegador.</p>
-      <div class="field"><label for="registration-user">Usuário</label><input id="registration-user" maxlength="100" autocomplete="username" required></div>
-      <div class="field"><label for="registration-role">Perfil de acesso</label><select id="registration-role" required><option value="">Selecione o perfil</option><option value="manager">Gerência</option><option value="collaborator">Colaborador</option></select><span class="field-hint">Gerência administra os veículos cadastrados. Colaborador realiza inspeções.</span></div>
+      <div class="field"><label for="registration-user">Nome</label><input id="registration-user" maxlength="100" autocomplete="name" required></div>
+      <div class="field"><label for="registration-email">E-mail</label><input id="registration-email" type="email" autocomplete="email" required></div>
       <div class="field"><label for="registration-password">Senha</label><input id="registration-password" type="password" minlength="6" autocomplete="new-password" required><span class="field-hint">Use pelo menos 6 caracteres.</span></div>
       <div class="field"><label for="registration-confirm">Confirme a senha</label><input id="registration-confirm" type="password" minlength="6" autocomplete="new-password" required></div>
       <p class="login-error" id="registration-error" role="alert" hidden></p>

@@ -174,13 +174,14 @@
     const HISTORY_KEY = "frota-checklist-history-v1";
     const VEHICLES_KEY = "frota-checklist-vehicles-v1";
     const OPERATORS_KEY = "frota-checklist-operators-v1";
-    const AUTH_KEY = "frota-checklist-password-sha256-v1";
-    const USER_KEY = "frota-checklist-user-v1";
-    const USER_ROLE_KEY = "frota-checklist-user-role-v1";
-    const INITIAL_PASSWORD = "123456";
     const EDIT_LOCK_MS = 5 * 60 * 1000;
     const statusNames = { ok: "Conforme", fail: "Não conforme", na: "N/A" };
     const notice = document.getElementById("notice");
+    const supabaseConfig = window.SUPABASE_CONFIG || {};
+    const supabaseReady = Boolean(window.supabase && supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes("SEU-PROJETO") && !supabaseConfig.anonKey.includes("SUA_CHAVE"));
+    const supabase = supabaseReady ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey) : null;
+    let authUser = null;
+    let cloudSaveTimer = null;
     let draft = readDraft();
     let history = readHistory();
     let vehicles = readVehicles();
@@ -450,6 +451,7 @@
     function saveRegistry(key, value) {
       try {
         localStorage.setItem(key, JSON.stringify(value));
+        if (supabase && authUser) queueCloudSave();
         return true;
       } catch (error) {
         showNotice(`Não foi possível salvar o cadastro no navegador: ${error.message}`);
@@ -472,6 +474,7 @@
     function save(key, value) {
       try {
         localStorage.setItem(key, JSON.stringify(value));
+        if (supabase && authUser) queueCloudSave();
         document.getElementById("save-state").textContent = `Salvo automaticamente às ${new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date())}`;
         return true;
       } catch (error) {
@@ -479,6 +482,54 @@
         document.getElementById("save-state").textContent = "Falha ao salvar — imprima uma cópia";
         return false;
       }
+    }
+
+    function queueCloudSave() {
+      window.clearTimeout(cloudSaveTimer);
+      cloudSaveTimer = window.setTimeout(() => syncCurrentInspection().catch((error) => showNotice(`Falha ao sincronizar com Supabase: ${error.message}`)), 700);
+    }
+
+    function inspectionFromRow(row) {
+      const vehicleData = row.dados_veiculo || {};
+      const type = ({ carro: "car", caminhao: "truck", maquina: "machine" })[vehicleData.tipo] || "";
+      const answers = {};
+      (row.itens_inspecao || []).forEach((item) => {
+        if (item.resposta) answers[item.codigo_item] = { status: ({ ok: "ok", nao_conforme: "fail", na: "na" })[item.resposta], note: item.observacao || "" };
+      });
+      return { id: row.id, openedAt: row.aberto_em, finalizedAt: row.finalizado_em, editedAt: row.editado_em, operator: row.nome_operador, comment: row.comentario_geral || "", aptitude: ({ apto: "fit", nao_apto: "unfit", pendente: "pending" })[row.aptidao], vehicle: { type, plate: vehicleData.placa || "", fleetNumber: vehicleData.numero_frota || "", serialNumber: vehicleData.numero_serie || "", makeModel: vehicleData.marca_modelo || "", color: vehicleData.cor || "", reading: row.leitura == null ? "" : String(row.leitura), location: row.local_inspecao || "" }, answers };
+    }
+
+    async function syncCurrentInspection() {
+      if (!supabase || !authUser) return;
+      const typeMap = { car: "carro", truck: "caminhao", machine: "maquina" };
+      const statusMap = { ok: "ok", fail: "nao_conforme", na: "na" };
+      const vehicleRows = vehicles.map((entry) => ({ id: entry.id, tipo: typeMap[entry.type], placa: entry.details.plate || null, numero_frota: entry.details.fleetNumber || null, numero_serie: entry.details.serialNumber || null, marca_modelo: entry.details.makeModel || null, cor: entry.details.color || null, ativo: vehicleIsActive(entry), criado_por: authUser.id }));
+      if (currentRole === "manager" && vehicleRows.length) { const { error: vehicleError } = await supabase.from("veiculos").upsert(vehicleRows, { onConflict: "id" }); if (vehicleError) throw vehicleError; }
+      const operatorRows = operators.map((entry) => ({ id: entry.id, nome: entry.name, ativo: true, criado_por: authUser.id }));
+      if (operatorRows.length) { const { error: operatorError } = await supabase.from("operadores").upsert(operatorRows, { onConflict: "id", ignoreDuplicates: true }); if (operatorError) throw operatorError; }
+      if (!draft.vehicle.type || !draft.operator.trim()) return;
+      const vehicle = findSavedVehicle(draft.vehicle);
+      const { data: inspection, error } = await supabase.from("inspecoes").upsert({
+        id: draft.id, situacao: draft.finalizedAt ? "concluida" : "rascunho",
+        veiculo_id: vehicle?.id || null,
+        dados_veiculo: { tipo: typeMap[draft.vehicle.type], placa: draft.vehicle.plate, numero_frota: draft.vehicle.fleetNumber, numero_serie: draft.vehicle.serialNumber, marca_modelo: draft.vehicle.makeModel, cor: draft.vehicle.color },
+        operador_usuario_id: authUser.id, nome_operador: draft.operator,
+        aberto_em: draft.openedAt, finalizado_em: draft.finalizedAt || null,
+        editado_em: draft.editedAt || null, leitura: Number(draft.vehicle.reading) || null,
+        unidade_leitura: draft.vehicle.type === "machine" ? "horas" : "km",
+        local_inspecao: draft.vehicle.location || null, comentario_geral: draft.comment || null,
+        aptidao: ({ fit: "apto", unfit: "nao_apto", pending: "pendente" })[draft.aptitude] || "pendente"
+      }, { onConflict: "id" }).select("id").single();
+      if (error) throw error;
+      const items = itemsForType(draft.vehicle.type).map((item, index) => ({
+        inspecao_id: inspection.id, codigo_item: item.id, titulo_secao: item.section,
+        descricao_item: item.label, essencial: item.essential, obrigatorio: true, ordem: index,
+        resposta: statusMap[draft.answers[item.id]?.status] || null,
+        observacao: draft.answers[item.id]?.note || null,
+        respondido_em: draft.answers[item.id]?.status ? new Date().toISOString() : null
+      }));
+      const { error: itemError } = await supabase.from("itens_inspecao").upsert(items, { onConflict: "inspecao_id,codigo_item" });
+      if (itemError) throw itemError;
     }
 
     function saveDraft() {
@@ -1396,88 +1447,56 @@
     });
     managedVehicleForm.addEventListener("submit", saveManagedVehicle);
 
-    async function passwordHash(password) {
-      if (!crypto.subtle) {
-        throw new Error("A autenticação exige um navegador seguro. Abra a aplicação por localhost ou HTTPS.");
-      }
-      const bytes = new TextEncoder().encode(password);
-      const digest = await crypto.subtle.digest("SHA-256", bytes);
-      return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-    }
-
-    async function isValidPassword(password) {
-      let savedHash;
-      try {
-        savedHash = localStorage.getItem(AUTH_KEY);
-      } catch (error) {
-        throw new Error(`Não foi possível verificar a senha salva: ${error.message}`);
-      }
-      if (!savedHash) return password === INITIAL_PASSWORD;
-      return (await passwordHash(password)) === savedHash;
-    }
-
-    function storedUsername() {
-      try { return localStorage.getItem(USER_KEY) || ""; }
-      catch (error) { return ""; }
-    }
-
-    function storedRole() {
-      try {
-        const role = localStorage.getItem(USER_ROLE_KEY);
-        return role === "collaborator" ? "collaborator" : "manager";
-      } catch (error) {
-        return "manager";
-      }
-    }
-
     document.getElementById("login-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const username = document.getElementById("login-user").value.trim();
       const password = document.getElementById("login-password").value;
       const errorElement = document.getElementById("login-error");
       errorElement.hidden = true;
-      if (!username) {
-        errorElement.textContent = "Informe seu nome de usuário.";
+      if (!supabase) {
+        errorElement.textContent = "Configure a URL e a chave publishable em supabase/config.js para conectar ao projeto Supabase.";
         errorElement.hidden = false;
-        return;
-      }
-      const registeredUsername = storedUsername();
-      if (registeredUsername && normalize(username) !== normalize(registeredUsername)) {
-        errorElement.textContent = "Usuário não cadastrado neste navegador.";
-        errorElement.hidden = false;
-        document.getElementById("login-user").focus();
         return;
       }
       try {
-        if (!(await isValidPassword(password))) {
-          errorElement.textContent = "Senha incorreta. Confira a senha e tente novamente.";
-          errorElement.hidden = false;
-          document.getElementById("login-password").focus();
-          return;
-        }
+        const { data, error } = await supabase.auth.signInWithPassword({ email: username, password });
+        if (error) throw error;
+        authUser = data.user;
+        const { data: profile, error: profileError } = await supabase.from("perfis").select("nome_exibicao,perfil,ativo").eq("id", authUser.id).single();
+        if (profileError) throw profileError;
+        if (!profile.ativo) throw new Error("Este usuário está inativo. Procure a gerência.");
+        currentRole = profile.perfil === "gerencia" ? "manager" : "collaborator";
+        document.getElementById("logged-user").textContent = profile.nome_exibicao || username;
+        document.getElementById("logged-role").textContent = profile.perfil;
+        document.getElementById("manage-vehicles-button").hidden = currentRole !== "manager";
+        document.getElementById("login-screen").hidden = true;
+        document.getElementById("app-shell").hidden = false;
+        const vehicleQuery = supabase.from("veiculos").select("*");
+        if (currentRole !== "manager") vehicleQuery.eq("ativo", true);
+        const { data: rows, error: vehiclesError } = await vehicleQuery;
+        if (vehiclesError) throw vehiclesError;
+        vehicles = rows.map((row) => ({ id: row.id, type: ({ carro: "car", caminhao: "truck", maquina: "machine" })[row.tipo], active: row.ativo, details: { plate: row.placa || "", fleetNumber: row.numero_frota || "", serialNumber: row.numero_serie || "", makeModel: row.marca_modelo || "", color: row.cor || "" } }));
+        const { data: operatorRows, error: operatorsError } = await supabase.from("operadores").select("id,nome,ativo").eq("ativo", true);
+        if (operatorsError) throw operatorsError;
+        operators = operatorRows.map((row) => ({ id: row.id, name: row.nome }));
+        const { data: inspections, error: inspectionsError } = await supabase.from("inspecoes").select("*,itens_inspecao(*)").order("aberto_em", { ascending: false }).limit(100);
+        if (inspectionsError) throw inspectionsError;
+        history = inspections.filter((row) => row.situacao === "concluida").map(inspectionFromRow);
+        const ownDraft = inspections.find((row) => row.operador_usuario_id === authUser.id && row.situacao === "rascunho");
+        if (ownDraft) draft = inspectionFromRow(ownDraft);
+        saveRegistry(VEHICLES_KEY, vehicles); saveRegistry(OPERATORS_KEY, operators); save(HISTORY_KEY, history); save(DRAFT_KEY, draft);
+        renderRegistries(); renderHistory(); updateInputsFromDraft();
+        document.getElementById("login-password").value = "";
+        if (!draft.finalizedAt && !draft.operator.trim()) { draft.operator = profile.nome_exibicao || username; setInputValues(); saveDraft(); }
       } catch (error) {
-        errorElement.textContent = error.message;
+        errorElement.textContent = `Não foi possível entrar: ${error.message}`;
         errorElement.hidden = false;
-        return;
-      }
-
-      document.getElementById("logged-user").textContent = username;
-      currentRole = storedRole();
-      document.getElementById("logged-role").textContent = currentRole === "manager" ? "Gerência" : "Colaborador";
-      document.getElementById("manage-vehicles-button").hidden = currentRole !== "manager";
-      document.getElementById("login-screen").hidden = true;
-      document.getElementById("app-shell").hidden = false;
-      renderRegistries();
-      document.getElementById("login-password").value = "";
-      if (!draft.finalizedAt && !draft.operator.trim()) {
-        draft.operator = username;
-        setInputValues();
-        saveDraft();
-        renderRegistries();
       }
     });
 
     document.getElementById("logout-button").addEventListener("click", () => {
+      if (supabase) supabase.auth.signOut();
+      authUser = null;
       document.getElementById("app-shell").hidden = true;
       document.getElementById("login-screen").hidden = false;
       document.getElementById("login-password").value = "";
@@ -1500,12 +1519,7 @@
     document.getElementById("first-access-button").addEventListener("click", () => {
       const errorElement = document.getElementById("registration-error");
       errorElement.hidden = true;
-      if (storedUsername()) {
-        const loginError = document.getElementById("login-error");
-        loginError.textContent = "O primeiro acesso já foi cadastrado neste navegador. Use a opção Alterar senha.";
-        loginError.hidden = false;
-        return;
-      }
+      if (!supabase) { errorElement.textContent = "Configure a conexão com Supabase em supabase/config.js."; errorElement.hidden = false; registrationDialog.showModal(); return; }
       registrationDialog.showModal();
       document.getElementById("registration-user").focus();
     });
@@ -1513,16 +1527,11 @@
     document.getElementById("registration-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const username = document.getElementById("registration-user").value.trim();
-      const role = document.getElementById("registration-role").value;
+      const email = document.getElementById("registration-email").value.trim();
       const password = document.getElementById("registration-password").value;
       const confirmation = document.getElementById("registration-confirm").value;
       const errorElement = document.getElementById("registration-error");
       errorElement.hidden = true;
-      if (!role) {
-        errorElement.textContent = "Selecione Gerência ou Colaborador para definir o perfil de acesso.";
-        errorElement.hidden = false;
-        return;
-      }
       if (password.length < 6) {
         errorElement.textContent = "A senha precisa ter pelo menos 6 caracteres.";
         errorElement.hidden = false;
@@ -1534,15 +1543,15 @@
         return;
       }
       try {
-        localStorage.setItem(AUTH_KEY, await passwordHash(password));
-        localStorage.setItem(USER_KEY, username);
-        localStorage.setItem(USER_ROLE_KEY, role);
-        document.getElementById("login-user").value = username;
+        if (!supabase) throw new Error("Configure a URL e a chave Supabase em supabase/config.js.");
+        const { error } = await supabase.auth.signUp({ email, password, options: { data: { nome_exibicao: username } } });
+        if (error) throw error;
+        document.getElementById("login-user").value = email;
         document.getElementById("login-password").value = "";
         document.getElementById("registration-form").reset();
         registrationDialog.close();
         document.getElementById("login-password").focus();
-        document.getElementById("login-error").textContent = "Cadastro concluído. Entre com sua senha.";
+        document.getElementById("login-error").textContent = "Cadastro enviado. Confirme o e-mail, se solicitado, e entre com sua senha. O novo perfil começa como colaborador; a gerência deve atribuir outros perfis pelo processo administrativo.";
         document.getElementById("login-error").hidden = false;
       } catch (error) {
         errorElement.textContent = `Não foi possível concluir o cadastro: ${error.message}`;
@@ -1568,12 +1577,12 @@
         return;
       }
       try {
-        if (!(await isValidPassword(current))) {
-          errorElement.textContent = "A senha atual está incorreta.";
-          errorElement.hidden = false;
-          return;
-        }
-        localStorage.setItem(AUTH_KEY, await passwordHash(next));
+        if (!supabase) throw new Error("Supabase não está configurado.");
+        const email = document.getElementById("login-user").value.trim();
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: current });
+        if (signInError) throw new Error("A senha atual está incorreta.");
+        const { error } = await supabase.auth.updateUser({ password: next });
+        if (error) throw error;
         document.getElementById("change-password-form").reset();
         passwordDialog.close();
         document.getElementById("login-error").textContent = "Senha alterada com sucesso. Use a nova senha no próximo acesso.";

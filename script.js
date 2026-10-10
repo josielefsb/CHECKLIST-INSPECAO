@@ -679,7 +679,10 @@
 
     function formatDate(value) {
       if (!value) return "—";
-      return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+      const date = new Date(value);
+      const dateText = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+      const timeText = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date);
+      return `${dateText} às ${timeText}`;
     }
 
     function vehicleName(vehicle) {
@@ -1060,13 +1063,21 @@
       [...vehicleOptions.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).forEach(([value, label]) => vehicleSelect.add(new Option(label, value)));
       vehicleSelect.value = vehicleOptions.has(vehicleValue) ? vehicleValue : "";
 
-      const itemOptions = new Map();
+      const itemGroups = new Map();
       ["car", "truck", "machine"].forEach((type) => {
-        itemsForType(type).forEach((item) => itemOptions.set(item.id, `${item.section} — ${item.label}`));
+        sectionsForType(type).forEach((section) => {
+          if (!itemGroups.has(section.title)) itemGroups.set(section.title, new Map());
+          section.items.forEach(([id, label]) => itemGroups.get(section.title).set(id, label));
+        });
       });
       itemSelect.replaceChildren(new Option("Todos os itens", ""));
-      [...itemOptions.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).forEach(([value, label]) => itemSelect.add(new Option(label, value)));
-      itemSelect.value = itemOptions.has(itemValue) ? itemValue : "";
+      [...itemGroups.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR")).forEach(([category, items]) => {
+        const group = document.createElement("optgroup");
+        group.label = category;
+        [...items.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).forEach(([value, label]) => group.append(new Option(label, value)));
+        itemSelect.append(group);
+      });
+      itemSelect.value = [...itemGroups.values()].some((items) => items.has(itemValue)) ? itemValue : "";
       document.getElementById("history-filter-status").value = statusValue;
       return { vehicle: vehicleSelect.value, item: itemSelect.value, status: statusValue };
     }
@@ -1168,9 +1179,9 @@
         [
           ["Tipo", vehicleName(record.vehicle)],
           ["Operador", record.operator || "—"],
-          ["Iniciado", formatDate(record.openedAt)],
-          ["Finalizado", formatDate(record.finalizedAt)],
-          ...(record.editedAt ? [["Última edição", formatDate(record.editedAt)]] : []),
+          ["Data e horário de início", formatDate(record.openedAt)],
+          ["Data e horário de finalização", formatDate(record.finalizedAt)],
+          ...(record.editedAt ? [["Data e horário da última edição", formatDate(record.editedAt)]] : []),
           ["Placa / registro", record.vehicle?.plate || "—"],
           ["Frota / patrimônio", record.vehicle?.fleetNumber || "—"],
           ["Série / chassi", record.vehicle?.serialNumber || "—"],

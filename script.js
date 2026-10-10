@@ -179,7 +179,7 @@
     const notice = document.getElementById("notice");
     const supabaseConfig = window.SUPABASE_CONFIG || {};
     const supabaseReady = Boolean(window.supabase && supabaseConfig.url && supabaseConfig.anonKey && !supabaseConfig.url.includes("SEU-PROJETO") && !supabaseConfig.anonKey.includes("SUA_CHAVE"));
-    const supabase = supabaseReady ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey) : null;
+    const supabaseClient = supabaseReady ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey) : null;
     let authUser = null;
     let cloudSaveTimer = null;
     let draft = readDraft();
@@ -451,7 +451,7 @@
     function saveRegistry(key, value) {
       try {
         localStorage.setItem(key, JSON.stringify(value));
-        if (supabase && authUser) queueCloudSave();
+        if (supabaseClient && authUser) queueCloudSave();
         return true;
       } catch (error) {
         showNotice(`Não foi possível salvar o cadastro no navegador: ${error.message}`);
@@ -474,7 +474,7 @@
     function save(key, value) {
       try {
         localStorage.setItem(key, JSON.stringify(value));
-        if (supabase && authUser) queueCloudSave();
+        if (supabaseClient && authUser) queueCloudSave();
         document.getElementById("save-state").textContent = `Salvo automaticamente às ${new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date())}`;
         return true;
       } catch (error) {
@@ -500,16 +500,16 @@
     }
 
     async function syncCurrentInspection() {
-      if (!supabase || !authUser) return;
+      if (!supabaseClient || !authUser) return;
       const typeMap = { car: "carro", truck: "caminhao", machine: "maquina" };
       const statusMap = { ok: "ok", fail: "nao_conforme", na: "na" };
       const vehicleRows = vehicles.map((entry) => ({ id: entry.id, tipo: typeMap[entry.type], placa: entry.details.plate || null, numero_frota: entry.details.fleetNumber || null, numero_serie: entry.details.serialNumber || null, marca_modelo: entry.details.makeModel || null, cor: entry.details.color || null, ativo: vehicleIsActive(entry), criado_por: authUser.id }));
-      if (currentRole === "manager" && vehicleRows.length) { const { error: vehicleError } = await supabase.from("veiculos").upsert(vehicleRows, { onConflict: "id" }); if (vehicleError) throw vehicleError; }
+      if (currentRole === "manager" && vehicleRows.length) { const { error: vehicleError } = await supabaseClient.from("veiculos").upsert(vehicleRows, { onConflict: "id" }); if (vehicleError) throw vehicleError; }
       const operatorRows = operators.map((entry) => ({ id: entry.id, nome: entry.name, ativo: true, criado_por: authUser.id }));
-      if (operatorRows.length) { const { error: operatorError } = await supabase.from("operadores").upsert(operatorRows, { onConflict: "id", ignoreDuplicates: true }); if (operatorError) throw operatorError; }
+      if (operatorRows.length) { const { error: operatorError } = await supabaseClient.from("operadores").upsert(operatorRows, { onConflict: "id", ignoreDuplicates: true }); if (operatorError) throw operatorError; }
       if (!draft.vehicle.type || !draft.operator.trim()) return;
       const vehicle = findSavedVehicle(draft.vehicle);
-      const { data: inspection, error } = await supabase.from("inspecoes").upsert({
+      const { data: inspection, error } = await supabaseClient.from("inspecoes").upsert({
         id: draft.id, situacao: draft.finalizedAt ? "concluida" : "rascunho",
         veiculo_id: vehicle?.id || null,
         dados_veiculo: { tipo: typeMap[draft.vehicle.type], placa: draft.vehicle.plate, numero_frota: draft.vehicle.fleetNumber, numero_serie: draft.vehicle.serialNumber, marca_modelo: draft.vehicle.makeModel, cor: draft.vehicle.color },
@@ -528,7 +528,7 @@
         observacao: draft.answers[item.id]?.note || null,
         respondido_em: draft.answers[item.id]?.status ? new Date().toISOString() : null
       }));
-      const { error: itemError } = await supabase.from("itens_inspecao").upsert(items, { onConflict: "inspecao_id,codigo_item" });
+      const { error: itemError } = await supabaseClient.from("itens_inspecao").upsert(items, { onConflict: "inspecao_id,codigo_item" });
       if (itemError) throw itemError;
     }
 
@@ -1453,16 +1453,16 @@
       const password = document.getElementById("login-password").value;
       const errorElement = document.getElementById("login-error");
       errorElement.hidden = true;
-      if (!supabase) {
+      if (!supabaseClient) {
         errorElement.textContent = "Configure a URL e a chave publishable em supabase/config.js para conectar ao projeto Supabase.";
         errorElement.hidden = false;
         return;
       }
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email: username, password });
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email: username, password });
         if (error) throw error;
         authUser = data.user;
-        const { data: profile, error: profileError } = await supabase.from("perfis").select("nome_exibicao,perfil,ativo").eq("id", authUser.id).single();
+        const { data: profile, error: profileError } = await supabaseClient.from("perfis").select("nome_exibicao,perfil,ativo").eq("id", authUser.id).single();
         if (profileError) throw profileError;
         if (!profile.ativo) throw new Error("Este usuário está inativo. Procure a gerência.");
         currentRole = profile.perfil === "gerencia" ? "manager" : "collaborator";
@@ -1471,15 +1471,15 @@
         document.getElementById("manage-vehicles-button").hidden = currentRole !== "manager";
         document.getElementById("login-screen").hidden = true;
         document.getElementById("app-shell").hidden = false;
-        const vehicleQuery = supabase.from("veiculos").select("*");
+        const vehicleQuery = supabaseClient.from("veiculos").select("*");
         if (currentRole !== "manager") vehicleQuery.eq("ativo", true);
         const { data: rows, error: vehiclesError } = await vehicleQuery;
         if (vehiclesError) throw vehiclesError;
         vehicles = rows.map((row) => ({ id: row.id, type: ({ carro: "car", caminhao: "truck", maquina: "machine" })[row.tipo], active: row.ativo, details: { plate: row.placa || "", fleetNumber: row.numero_frota || "", serialNumber: row.numero_serie || "", makeModel: row.marca_modelo || "", color: row.cor || "" } }));
-        const { data: operatorRows, error: operatorsError } = await supabase.from("operadores").select("id,nome,ativo").eq("ativo", true);
+        const { data: operatorRows, error: operatorsError } = await supabaseClient.from("operadores").select("id,nome,ativo").eq("ativo", true);
         if (operatorsError) throw operatorsError;
         operators = operatorRows.map((row) => ({ id: row.id, name: row.nome }));
-        const { data: inspections, error: inspectionsError } = await supabase.from("inspecoes").select("*,itens_inspecao(*)").order("aberto_em", { ascending: false }).limit(100);
+        const { data: inspections, error: inspectionsError } = await supabaseClient.from("inspecoes").select("*,itens_inspecao(*)").order("aberto_em", { ascending: false }).limit(100);
         if (inspectionsError) throw inspectionsError;
         history = inspections.filter((row) => row.situacao === "concluida").map(inspectionFromRow);
         const ownDraft = inspections.find((row) => row.operador_usuario_id === authUser.id && row.situacao === "rascunho");
@@ -1495,7 +1495,7 @@
     });
 
     document.getElementById("logout-button").addEventListener("click", () => {
-      if (supabase) supabase.auth.signOut();
+      if (supabaseClient) supabaseClient.auth.signOut();
       authUser = null;
       document.getElementById("app-shell").hidden = true;
       document.getElementById("login-screen").hidden = false;
@@ -1519,7 +1519,7 @@
     document.getElementById("first-access-button").addEventListener("click", () => {
       const errorElement = document.getElementById("registration-error");
       errorElement.hidden = true;
-      if (!supabase) { errorElement.textContent = "Configure a conexão com Supabase em supabase/config.js."; errorElement.hidden = false; registrationDialog.showModal(); return; }
+      if (!supabaseClient) { errorElement.textContent = "Configure a conexão com Supabase em supabase/config.js."; errorElement.hidden = false; registrationDialog.showModal(); return; }
       registrationDialog.showModal();
       document.getElementById("registration-user").focus();
     });
@@ -1543,8 +1543,8 @@
         return;
       }
       try {
-        if (!supabase) throw new Error("Configure a URL e a chave Supabase em supabase/config.js.");
-        const { error } = await supabase.auth.signUp({ email, password, options: { data: { nome_exibicao: username } } });
+        if (!supabaseClient) throw new Error("Configure a URL e a chave Supabase em supabase/config.js.");
+        const { error } = await supabaseClient.auth.signUp({ email, password, options: { data: { nome_exibicao: username } } });
         if (error) throw error;
         document.getElementById("login-user").value = email;
         document.getElementById("login-password").value = "";
@@ -1577,11 +1577,11 @@
         return;
       }
       try {
-        if (!supabase) throw new Error("Supabase não está configurado.");
+        if (!supabaseClient) throw new Error("Supabase não está configurado.");
         const email = document.getElementById("login-user").value.trim();
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: current });
+        const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email, password: current });
         if (signInError) throw new Error("A senha atual está incorreta.");
-        const { error } = await supabase.auth.updateUser({ password: next });
+        const { error } = await supabaseClient.auth.updateUser({ password: next });
         if (error) throw error;
         document.getElementById("change-password-form").reset();
         passwordDialog.close();

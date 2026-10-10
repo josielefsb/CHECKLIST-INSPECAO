@@ -59,7 +59,8 @@
     .eyebrow { margin: 0 0 8px; color: var(--blue); font-size: .74rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
     h1 { margin: 0; color: var(--navy); font-size: clamp(2rem, 4vw, 2.75rem); letter-spacing: -.055em; line-height: 1.08; }
     .subtitle { max-width: 680px; margin: 10px 0 0; color: var(--muted); line-height: 1.55; }
-    .header-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+    .header-actions { display: flex; flex-wrap: nowrap; gap: 9px; }
+    .header-actions .button { min-width: 0; flex: 1 1 0; text-align: center; white-space: normal; }
     .button { min-height: 42px; padding: 10px 15px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: white; font-weight: 750; }
     .button:hover { background: #f8fafc; }
     .button.button-print { border-color: #e2ad2d; color: #332504; background: #f5c84c; }
@@ -289,8 +290,7 @@
 
     @media (max-width: 920px) {
       .page-heading { align-items: flex-start; flex-direction: column; }
-      .header-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
-      .header-actions .button { min-width: 0; }
+      .header-actions { display: flex; flex-wrap: nowrap; width: 100%; }
       .layout { grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; }
       .identity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .span-3 { grid-column: span 2; }
@@ -347,8 +347,8 @@
       .guide-art { flex-basis: 62px; width: 62px; height: 62px; border-radius: 18px; }
       .guide-art svg { width: 58px; height: 58px; }
       .checklist-toolbar { align-items: stretch; flex-direction: column; }
-      .header-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-      .header-actions .button { min-width: 0; padding-inline: 5px; font-size: .72rem; line-height: 1.15; }
+      .header-actions { display: flex; flex-wrap: nowrap; gap: 5px; }
+      .header-actions .button { min-width: 0; flex: 1 1 0; padding-inline: 4px; font-size: .7rem; line-height: 1.15; }
       .group-title { align-items: flex-start; }
       .group-title-main { align-items: flex-start; }
       .section-illustration { flex-basis: 44px; width: 44px; height: 44px; border-radius: 13px; }

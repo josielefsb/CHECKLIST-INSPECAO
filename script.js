@@ -638,6 +638,13 @@
       })));
     }
 
+    function historyAptitude(record) {
+      if (record.aptitude === "fit" || record.aptitude === "unfit") return record.aptitude;
+      const essentialItems = itemsForType(record.vehicle?.type).filter(({ essential }) => essential);
+      if (!essentialItems.length) return "unfit";
+      return essentialItems.every(({ id }) => record.answers?.[id]?.status === "ok") ? "fit" : "unfit";
+    }
+
     function allItems() {
       return itemsForType(draft.vehicle.type);
     }
@@ -1120,12 +1127,13 @@
 
       history.slice(0, 5).forEach((record) => {
         const entry = document.createElement("div");
-        entry.className = "history-entry";
+        const aptitude = historyAptitude(record);
+        entry.className = `history-entry${aptitude === "fit" ? " apto" : aptitude === "unfit" ? " nao-apto" : ""}`;
         const title = document.createElement("strong");
         title.textContent = vehicleName(record.vehicle);
         const detail = document.createElement("span");
         const issues = Object.values(record.answers || {}).filter((answer) => answer.status === "fail").length;
-        const aptitudeLabel = record.aptitude === "fit" ? "Apto" : record.aptitude === "unfit" ? "Não apto" : "Pendente";
+        const aptitudeLabel = aptitude === "fit" ? "Apto" : aptitude === "unfit" ? "Não apto" : "Pendente";
         detail.textContent = `${record.operator || "Operador não informado"} · ${formatDate(record.openedAt)} · ${aptitudeLabel} · ${issues} não conformidade(s)`;
         entry.append(title, detail);
         container.append(entry);
@@ -1134,14 +1142,11 @@
       filteredHistory.forEach((record) => {
         const recordItems = itemsForType(record.vehicle?.type);
         const failedCount = recordItems.filter(({ id }) => record.answers?.[id]?.status === "fail").length;
-        const criticalFailure = recordItems.some(({ id, essential }) => essential && record.answers?.[id]?.status === "fail");
-        const essentialItems = recordItems.filter(({ essential }) => essential);
-        const essentialsConfirmed = essentialItems.every(({ id }) => record.answers?.[id]?.status === "ok");
-        const aptitude = record.aptitude || (criticalFailure ? "unfit" : essentialsConfirmed ? "fit" : "pending");
+        const aptitude = historyAptitude(record);
         const aptitudeLabel = aptitude === "fit" ? "Apto" : aptitude === "unfit" ? "Não apto" : "Pendente";
 
         const details = document.createElement("details");
-        details.className = "history-record";
+        details.className = `history-record${aptitude === "fit" ? " apto" : aptitude === "unfit" ? " nao-apto" : ""}`;
         const summary = document.createElement("summary");
         const titleWrap = document.createElement("span");
         titleWrap.className = "history-record-title";
